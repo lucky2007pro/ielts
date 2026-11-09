@@ -64,6 +64,7 @@ export default function Home() {
   // Vocabulary search & filter
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'all' | 'new' | 'learning' | 'reviewing' | 'mastered'>('all');
+  const [selectedGameFilter, setSelectedGameFilter] = useState<'all' | 'leksika' | 'grammatika' | 'writing' | 'audio' | 'boss'>('all');
 
   // Coach AI state
   const [coachInput, setCoachInput] = useState(
@@ -131,6 +132,17 @@ export default function Home() {
     return matchesSearch && matchesStatus;
   });
 
+  // Filtered games
+  const filteredGames = GAME_MODES.filter((g) => {
+    if (selectedGameFilter === 'all') return true;
+    if (selectedGameFilter === 'leksika') return g.category.includes('Leksika') || g.category.includes('Akademik Lug');
+    if (selectedGameFilter === 'grammatika') return g.category.includes('Grammatika') || g.category.includes('Proofreading');
+    if (selectedGameFilter === 'writing') return g.category.includes('Writing') || g.id === 'academic_paraphrase';
+    if (selectedGameFilter === 'audio') return g.category.includes('Listening') || g.category.includes('Speaking');
+    if (selectedGameFilter === 'boss') return g.id === 'ai_boss_fight';
+    return true;
+  });
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center">
@@ -187,9 +199,92 @@ export default function Home() {
               </button>
             </div>
 
+            {/* Mini Skill Rings Bar (Matching Page 2 & Page 8) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-3xl bg-slate-900/60 border border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <svg className="w-12 h-12 transform -rotate-90">
+                    <circle cx="24" cy="24" r="20" stroke="#1e293b" strokeWidth="4" fill="transparent" />
+                    <circle cx="24" cy="24" r="20" stroke="#06b6d4" strokeWidth="4" strokeDasharray="125.6" strokeDashoffset="32.6" strokeLinecap="round" fill="transparent" />
+                  </svg>
+                  <span className="absolute text-[11px] font-black text-cyan-400">74%</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">Vocabulary</p>
+                  <p className="text-[10px] text-slate-400">1,240 ta so&apos;z</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <svg className="w-12 h-12 transform -rotate-90">
+                    <circle cx="24" cy="24" r="20" stroke="#1e293b" strokeWidth="4" fill="transparent" />
+                    <circle cx="24" cy="24" r="20" stroke="#a855f7" strokeWidth="4" strokeDasharray="125.6" strokeDashoffset="44" strokeLinecap="round" fill="transparent" />
+                  </svg>
+                  <span className="absolute text-[11px] font-black text-purple-400">{user.stats.grammar_score}%</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">Grammar</p>
+                  <p className="text-[10px] text-slate-400">Range & Accuracy</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <svg className="w-12 h-12 transform -rotate-90">
+                    <circle cx="24" cy="24" r="20" stroke="#1e293b" strokeWidth="4" fill="transparent" />
+                    <circle cx="24" cy="24" r="20" stroke="#f59e0b" strokeWidth="4" strokeDasharray="125.6" strokeDashoffset="56.5" strokeLinecap="round" fill="transparent" />
+                  </svg>
+                  <span className="absolute text-[11px] font-black text-amber-400">{user.stats.writing_score}%</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">Writing</p>
+                  <p className="text-[10px] text-slate-400">Task 1 & Task 2</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <svg className="w-12 h-12 transform -rotate-90">
+                    <circle cx="24" cy="24" r="20" stroke="#1e293b" strokeWidth="4" fill="transparent" />
+                    <circle cx="24" cy="24" r="20" stroke="#10b981" strokeWidth="4" strokeDasharray="125.6" strokeDashoffset="50.2" strokeLinecap="round" fill="transparent" />
+                  </svg>
+                  <span className="absolute text-[11px] font-black text-emerald-400">{user.stats.speaking_score}%</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-white">Speaking</p>
+                  <p className="text-[10px] text-slate-400">Fluency & Pronunciation</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Games Skill Category Filters */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {[
+                { id: 'all', label: `Barcha O'yinlar (${GAME_MODES.length})` },
+                { id: 'leksika', label: 'Leksika & Imlo' },
+                { id: 'grammatika', label: 'Grammatika' },
+                { id: 'writing', label: 'Writing & Duellar' },
+                { id: 'audio', label: 'Audio & Speaking' },
+                { id: 'boss', label: 'AI Boss Fight 👑' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedGameFilter(cat.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    selectedGameFilter === cat.id
+                      ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
+                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
             {/* Games Grid (10 Games matching spec) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-              {GAME_MODES.map((game, idx) => {
+              {filteredGames.map((game, idx) => {
                 const isSpecial = game.id === 'ai_boss_fight';
                 const isDuel = game.id === 'academic_paraphrase';
 
