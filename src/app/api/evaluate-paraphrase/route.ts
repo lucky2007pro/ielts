@@ -21,8 +21,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    // 1. Try FastAPI Python backend first if running
+    try {
+      const fastApiRes = await fetch('http://127.0.0.1:8000/api/games/evaluate-paraphrase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (fastApiRes.ok) {
+        const fastApiData = await fastApiRes.json();
+        return NextResponse.json(fastApiData);
+      }
+    } catch {
+      // Python backend not running or unreachable, fallback to local/Gemini
+    }
 
+    // 2. Direct Gemini API
+    const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
@@ -65,12 +80,11 @@ Kutilayotgan JSON formati:
       }
     }
 
-    // Intelligent local evaluator engine (fallback if no API key or API limit)
+    // 3. Built-in Academic Heuristic Evaluator
     const lower = user_paraphrase.toLowerCase();
     const hasTargetWord = target_word ? lower.includes(target_word.toLowerCase()) : true;
     const wordCount = user_paraphrase.trim().split(/\s+/).length;
 
-    // Advanced academic markers check
     const academicTokens = [
       'mitigate', 'ubiquitous', 'detrimental', 'substantial', 'facilitate',
       'proliferate', 'scrutinize', 'consequently', 'furthermore', 'imperative',
@@ -88,10 +102,8 @@ Kutilayotgan JSON formati:
     }
     band = Math.min(8.5, Math.max(5.5, band));
 
-    const isSuccess = band >= 6.5;
-
     return NextResponse.json({
-      is_success: isSuccess,
+      is_success: band >= 6.5,
       evaluated_band: Number(band.toFixed(1)),
       criteria_scores: {
         task_achievement: Number((band + 0.2).toFixed(1)),
@@ -99,8 +111,8 @@ Kutilayotgan JSON formati:
         grammatical_range: Number((band - 0.1).toFixed(1)),
       },
       feedback_uz: hasTargetWord
-        ? `Juda yaxshi urinish! '${target_word}' so'zi o'z o'rnida qo'llangan va jumlaga akademik ohang bergan.`
-        : `Yaxshi, biroq belgilangan '${target_word}' so'zi to'liq qatnashmadi. Gap tuzilishi tahlil qilindi.`,
+        ? `Juda yaxshi natija! '${target_word}' so'zi o'z o'rnida qo'llangan va jumlaga akademik ohang bergan.`
+        : `Yaxshi, ammo topshiriqda belgilangan '${target_word}' so'zi to'liq qatnashmadi. Gap tuzilishi tahlil qilindi.`,
       c1_upgrade: `Implementing targeted strategies substantially mitigates the negative repercussions in the long term.`,
       upgrades: [
         { original: "make a lot of", upgraded: "generate substantial amounts of" },

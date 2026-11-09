@@ -1,0 +1,66 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import settings
+from app.database import engine, Base, SessionLocal
+from app.models.models import VocabularyWord, User
+from app.routers import vocabulary, ai_coach, games
+
+# Create DB tables
+Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Auto-seed initial IELTS words on startup if empty
+    db = SessionLocal()
+    try:
+        if db.query(User).count() == 0:
+            user = User(
+                full_name="Alijon T.",
+                email="alijon@lexiai.uz",
+                current_level="B2",
+                target_ielts_band=7.5,
+                xp_points=12450,
+                level=14,
+                streak_days=14,
+            )
+            db.add(user)
+            db.commit()
+
+        if db.query(VocabularyWord).count() == 0:
+            from app.routers.vocabulary import seed_initial_words
+            seed_initial_words(db)
+    finally:
+        db.close()
+    yield
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    description="LexiAI IELTS: 10 ta interaktiv o'yinlar, SM-2 takrorlash algoritmi va AI IELTS Agent API servisi",
+    lifespan=lifespan,
+)
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount Routers
+app.include_router(vocabulary.router, prefix=settings.API_V1_STR)
+app.include_router(ai_coach.router, prefix=settings.API_V1_STR)
+app.include_router(games.router, prefix=settings.API_V1_STR)
+
+@app.get("/")
+def root():
+    return {
+        "service": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "status": "online",
+        "docs": "/docs",
+    }
