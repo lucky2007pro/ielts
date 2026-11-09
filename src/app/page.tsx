@@ -7,7 +7,7 @@ import { SpeedSprintModal } from '@/components/games/SpeedSprintModal';
 import { SentenceBuilderModal } from '@/components/games/SentenceBuilderModal';
 import { ParaphraseDuelModal } from '@/components/games/ParaphraseDuelModal';
 import { CollocationMatcherModal } from '@/components/games/CollocationMatcherModal';
-import { getUserProfile, getVocabularyList } from '@/lib/storage';
+import { getUserProfile, getVocabularyList, DEFAULT_USER } from '@/lib/storage';
 import { UserProfile, VocabularyWord, GameId } from '@/types';
 import { GAME_MODES } from '@/data/gameModes';
 import {
@@ -52,7 +52,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 };
 
 export default function Home() {
-  const [user, setUser] = useState<UserProfile>(getUserProfile());
+  const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [vocabulary, setVocabulary] = useState<VocabularyWord[]>([]);
   const [activeTab, setActiveTab] = useState<'arena' | 'vocabulary' | 'coach' | 'analytics'>('arena');
 
@@ -72,6 +73,7 @@ export default function Home() {
   const [coachFeedback, setCoachFeedback] = useState<any | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     setUser(getUserProfile());
     setVocabulary(getVocabularyList());
   }, []);
@@ -128,6 +130,19 @@ export default function Home() {
       selectedStatusFilter === 'all' || w.status === selectedStatusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-black text-xl animate-pulse">
+            L
+          </div>
+          <span className="text-xs text-slate-400 font-mono tracking-wider">Yuklanmoqda...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col">

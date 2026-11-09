@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* XP Points */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-amber-500/20 text-amber-400 text-xs font-bold">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>{user.xp_points.toLocaleString()} XP</span>
+              <span>{user.xp_points} XP</span>
             </div>
 
             {/* Streak */}

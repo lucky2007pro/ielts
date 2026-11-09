@@ -17,7 +17,7 @@ export const DEFAULT_USER: UserProfile = {
   xp_points: 12450,
   level: 14,
   streak_days: 14,
-  last_study_date: new Date().toISOString(),
+  last_study_date: '2026-11-10T00:00:00.000Z',
   stats: {
     words_learned: 124,
     words_mastered: 48,
