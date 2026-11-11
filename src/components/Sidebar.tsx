@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import {
   LayoutDashboard,
   Gamepad2,
@@ -21,7 +22,7 @@ interface SidebarProps {
   user: UserProfile;
   isAuthenticated: boolean;
   activeTab: AppTab;
-  setActiveTab: (tab: AppTab) => void;
+  setActiveTab?: (tab: AppTab) => void;
   onOpenAuth: () => void;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
@@ -49,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems: Array<{
     id: AppTab;
+    href: string;
     label: string;
     badge?: string;
     isAi?: boolean;
@@ -56,35 +58,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }> = [
     {
       id: 'dashboard',
+      href: '/dashboard',
       label: 'Dashboard',
       icon: <LayoutDashboard className="w-4 h-4" />,
     },
     {
       id: 'arena',
+      href: '/arena',
       label: 'Game Arena',
       badge: '10',
       icon: <Gamepad2 className="w-4 h-4" />,
     },
     {
       id: 'vocabulary',
+      href: '/vocabulary',
       label: 'My Vocabulary',
       icon: <BookOpen className="w-4 h-4" />,
     },
     {
       id: 'coach',
+      href: '/coach',
       label: 'AI IELTS Coach',
       isAi: true,
       icon: <Brain className="w-4 h-4" />,
     },
     {
       id: 'analytics',
-      label: 'Leaderboard & Analytics',
+      href: '/analytics',
+      label: 'Kalendar & Statistika',
       icon: <BarChart3 className="w-4 h-4" />,
     },
   ];
 
-  const handleNav = (id: AppTab) => {
-    setActiveTab(id);
+  const handleNavClick = (id: AppTab) => {
+    setActiveTab?.(id);
     setMobileOpen(false);
   };
 
@@ -126,9 +133,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {navItems.map((item) => {
               const active = activeTab === item.id;
               return (
-                <button
+                <Link
                   key={item.id}
-                  onClick={() => handleNav(item.id)}
+                  href={item.href}
+                  onClick={() => handleNavClick(item.id)}
                   className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all duration-200 ${
                     active
                       ? 'bg-slate-200/70 dark:bg-white/10 text-slate-900 dark:text-white font-semibold border border-black/[0.06] dark:border-white/[0.1] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_2px_10px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_12px_rgba(0,0,0,0.2)]'
@@ -160,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       AI
                     </span>
                   )}
-                </button>
+                </Link>
               );
             })}
           </nav>

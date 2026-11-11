@@ -1,4 +1,4 @@
-import { UserProfile, VocabularyWord } from '@/types';
+import { DailyActivityLog, UserProfile, VocabularyWord } from '@/types';
 import { INITIAL_VOCABULARY } from '@/data/seedVocabulary';
 import { updateWordAfterReview } from './sm2';
 
@@ -8,7 +8,34 @@ function getKeys() {
   return {
     PROFILE: `lexiai_user_profile_${activeScope}`,
     VOCABULARY: `lexiai_user_vocabulary_${activeScope}`,
+    ACTIVITY: `lexiai_daily_activity_${activeScope}`,
   };
+}
+
+export function getLocalDateKey(input: Date | string = new Date()): string {
+  const d = typeof input === 'string' ? new Date(input) : input;
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function getDailyActivityLogs(): Record<string, DailyActivityLog> {
+  if (typeof window === 'undefined') return {};
+  const keys = getKeys();
+  try {
+    const saved = localStorage.getItem(keys.ACTIVITY);
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDailyActivityLogs(logs: Record<string, DailyActivityLog>): void {
+  if (typeof window === 'undefined') return;
+  const keys = getKeys();
+  localStorage.setItem(keys.ACTIVITY, JSON.stringify(logs));
 }
 
 export function setActiveUserScope(email?: string | null) {
@@ -125,26 +152,30 @@ export function saveVocabularyList(words: VocabularyWord[]): void {
   localStorage.setItem(keys.VOCABULARY, JSON.stringify(words));
 }
 
-export function addVocabularyWord(word: Partial<VocabularyWord> & { word_en: string; translation_uz: string }): VocabularyWord {
+export function addVocabularyWord(
+  word: Partial<VocabularyWord> & { word_en: string; translation_uz: string }
+): VocabularyWord {
   const words = getVocabularyList();
+  const nowIso = new Date().toISOString();
   const newWord: VocabularyWord = {
-    id: `w-${Date.now()}`,
+    id: `w-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     word_en: word.word_en.trim(),
     translation_uz: word.translation_uz.trim(),
-    phonetic: word.phonetic || `/${word.word_en.toLowerCase()}/`,
-    part_of_speech: word.part_of_speech || 'noun',
-    academic_level: word.academic_level || 'C1',
+    phonetic: word.phonetic || '',
+    skill_section: word.skill_section || 'general',
+    part_of_speech: word.part_of_speech || 'none',
+    academic_level: word.academic_level || 'none',
     collocations: word.collocations || [],
-    example_sentence: word.example_sentence || `The term ${word.word_en} plays a crucial role in academic research.`,
+    example_sentence: word.example_sentence?.trim() || '',
     example_translation_uz: word.example_translation_uz || '',
-    topic_tag: word.topic_tag || 'General',
+    topic_tag: word.topic_tag || 'None',
     mastery_score: 10,
     repetition_interval: 1,
     ease_factor: 2.5,
     review_count: 0,
-    next_review_date: new Date().toISOString(),
+    next_review_date: nowIso,
     status: 'new',
-    created_at: new Date().toISOString(),
+    created_at: nowIso,
   };
 
   const updated = [newWord, ...words];
@@ -154,7 +185,33 @@ export function addVocabularyWord(word: Partial<VocabularyWord> & { word_en: str
   profile.stats.words_learned = updated.length;
   saveUserProfile(profile);
 
+  // Record in daily activity log
+  const todayKey = getLocalDateKey(nowIso);
+  if (todayKey) {
+    const logs = getDailyActivityLogs();
+    const existing = logs[todayKey] || {
+      date: todayKey,
+      words_added: 0,
+      games_played: 0,
+      xp_earned: 0,
+      game_entries: [],
+    };
+    existing.words_added += 1;
+    logs[todayKey] = existing;
+    saveDailyActivityLogs(logs);
+  }
+
   return newWord;
+}
+
+export function updateVocabularyWord(
+  wordId: string,
+  patch: Partial<VocabularyWord>
+): VocabularyWord[] {
+  const words = getVocabularyList();
+  const updated = words.map((w) => (w.id === wordId ? { ...w, ...patch } : w));
+  saveVocabularyList(updated);
+  return updated;
 }
 
 export function recordWordReview(wordId: string, quality: number): void {
@@ -210,6 +267,32 @@ export function awardGameXP(
   profile.last_study_date = now.toISOString();
 
   saveUserProfile(profile);
+
+  // Record game in daily activity log
+  const todayKey = getLocalDateKey(now);
+  if (todayKey) {
+    const logs = getDailyActivityLogs();
+    const existing = logs[todayKey] || {
+      date: todayKey,
+      words_added: 0,
+      games_played: 0,
+      xp_earned: 0,
+      game_entries: [],
+    };
+    existing.games_played += 1;
+    existing.xp_earned += xp;
+    existing.game_entries = [
+      {
+        game_id: gameId,
+        score,
+        xp_earned: xp,
+        timestamp: now.toISOString(),
+      },
+      ...existing.game_entries,
+    ];
+    logs[todayKey] = existing;
+    saveDailyActivityLogs(logs);
+  }
 
   if (typeof window !== 'undefined' && profile.auth_provider !== 'guest' && profile.email) {
     fetch('/api/games/submit-score', {

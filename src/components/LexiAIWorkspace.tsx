@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Sidebar, AppTab } from '@/components/Sidebar';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { Sidebar } from '@/components/Sidebar';
 import { Navbar } from '@/components/Navbar';
 import { AuthModal } from '@/components/AuthModal';
 import { VocabularyModal } from '@/components/VocabularyModal';
+import { DailyCalendarAnalytics } from '@/components/DailyCalendarAnalytics';
 import { SpeedSprintModal } from '@/components/games/SpeedSprintModal';
 import { SentenceBuilderModal } from '@/components/games/SentenceBuilderModal';
 import { ParaphraseDuelModal } from '@/components/games/ParaphraseDuelModal';
@@ -18,11 +21,13 @@ import { AiBossFightModal } from '@/components/games/AiBossFightModal';
 import {
   getUserProfile,
   getVocabularyList,
+  getDailyActivityLogs,
   DEFAULT_USER,
   setActiveUserScope,
   syncSessionUserToProfile,
 } from '@/lib/storage';
-import { UserProfile, VocabularyWord, GameId } from '@/types';
+import { getGameHref, resolvePathToState } from '@/lib/routes';
+import { DailyActivityLog, IeltsSkillSection, UserProfile, VocabularyWord, GameId } from '@/types';
 import { GAME_MODES } from '@/data/gameModes';
 import {
   Zap,
@@ -50,6 +55,7 @@ import {
   LogIn,
   Clock,
   Crown,
+  Pencil,
 } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -74,7 +80,11 @@ interface LeaderboardEntry {
   xp_points: number;
 }
 
-export default function Home() {
+export const LexiAIWorkspace: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { tab: activeTab, gameId: activeGameModal } = resolvePathToState(pathname || '/');
+
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -83,17 +93,18 @@ export default function Home() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   const [vocabulary, setVocabulary] = useState<VocabularyWord[]>([]);
-  const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
+  const [activityLogs, setActivityLogs] = useState<Record<string, DailyActivityLog>>({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Modals state
   const [isAddWordOpen, setIsAddWordOpen] = useState(false);
+  const [editingWord, setEditingWord] = useState<VocabularyWord | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [activeGameModal, setActiveGameModal] = useState<GameId | null>(null);
 
   // Filters & search
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'all' | 'new' | 'learning' | 'reviewing' | 'mastered'>('all');
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState<'all' | IeltsSkillSection>('all');
   const [selectedGameFilter, setSelectedGameFilter] = useState<'all' | 'leksika' | 'grammatika' | 'writing' | 'audio' | 'boss'>('all');
 
   // Coach AI state
@@ -123,9 +134,9 @@ export default function Home() {
       if (errParam) {
         setAuthError(errParam);
         setIsAuthModalOpen(true);
-        window.history.replaceState({}, '', '/');
+        window.history.replaceState({}, '', pathname || '/');
       } else if (params.get('auth_success')) {
-        window.history.replaceState({}, '', '/');
+        window.history.replaceState({}, '', pathname || '/');
       }
     }
 
@@ -138,16 +149,19 @@ export default function Home() {
           setUser(synced);
           setIsAuthenticated(true);
           setVocabulary(getVocabularyList());
+          setActivityLogs(getDailyActivityLogs());
         } else {
           setActiveUserScope(null);
           setUser(getUserProfile());
           setIsAuthenticated(false);
           setVocabulary(getVocabularyList());
+          setActivityLogs(getDailyActivityLogs());
         }
       })
       .catch(() => {
         setUser(getUserProfile());
         setVocabulary(getVocabularyList());
+        setActivityLogs(getDailyActivityLogs());
       });
 
     fetchLeaderboard();
@@ -156,6 +170,7 @@ export default function Home() {
   const refreshState = () => {
     setUser(getUserProfile());
     setVocabulary(getVocabularyList());
+    setActivityLogs(getDailyActivityLogs());
     fetchLeaderboard();
   };
 
@@ -165,6 +180,7 @@ export default function Home() {
     setIsAuthenticated(true);
     setAuthError(null);
     setVocabulary(getVocabularyList());
+    setActivityLogs(getDailyActivityLogs());
     fetchLeaderboard();
   };
 
@@ -174,10 +190,15 @@ export default function Home() {
     setIsAuthenticated(false);
     setUser(getUserProfile());
     setVocabulary(getVocabularyList());
+    setActivityLogs(getDailyActivityLogs());
   };
 
   const handlePlayGame = (gameId: GameId) => {
-    setActiveGameModal(gameId);
+    router.push(getGameHref(gameId));
+  };
+
+  const handleCloseGame = () => {
+    router.push('/arena');
   };
 
   const playWordAudio = (word: string) => {
@@ -192,7 +213,7 @@ export default function Home() {
   const handleQuickSearch = (val: string) => {
     setSearchQuery(val);
     if (val.trim() && activeTab !== 'vocabulary') {
-      setActiveTab('vocabulary');
+      router.push('/vocabulary');
     }
   };
 
@@ -227,7 +248,9 @@ export default function Home() {
       w.translation_uz.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
       selectedStatusFilter === 'all' || w.status === selectedStatusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesSection =
+      selectedSectionFilter === 'all' || (w.skill_section || 'general') === selectedSectionFilter;
+    return matchesSearch && matchesStatus && matchesSection;
   });
 
   const filteredGames = GAME_MODES.filter((g) => {
@@ -273,7 +296,10 @@ export default function Home() {
       <Navbar
         user={user}
         isAuthenticated={isAuthenticated}
-        onOpenAddWord={() => setIsAddWordOpen(true)}
+        onOpenAddWord={() => {
+          setEditingWord(null);
+          setIsAddWordOpen(true);
+        }}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onToggleMobileMenu={() => setMobileMenuOpen(true)}
         quickSearch={searchQuery}
@@ -286,7 +312,6 @@ export default function Home() {
           user={user}
           isAuthenticated={isAuthenticated}
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           mobileOpen={mobileMenuOpen}
           setMobileOpen={setMobileMenuOpen}
@@ -294,6 +319,8 @@ export default function Home() {
         />
 
         <main className="flex-1 min-w-0 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+          {children}
+
           {/* ================= TAB 0: DASHBOARD (OVERVIEW) ================= */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
@@ -338,13 +365,13 @@ export default function Home() {
                     </button>
                   )}
 
-                  <button
-                    onClick={() => handlePlayGame('speed_sprint')}
+                  <Link
+                    href={getGameHref('speed_sprint')}
                     className="px-6 py-3 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 dark:from-emerald-400 dark:to-cyan-400 text-white dark:text-slate-950 font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-teal-600/20 dark:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
                     <Zap className="w-4 h-4 fill-current" />
                     <span>Mashqni Boshlash</span>
-                  </button>
+                  </Link>
                 </div>
               </section>
 
@@ -415,14 +442,17 @@ export default function Home() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2.5">
-                      <button
-                        onClick={() => setActiveTab('vocabulary')}
+                      <Link
+                        href="/vocabulary"
                         className="text-xs text-teal-600 dark:text-cyan-400 hover:underline font-semibold"
                       >
                         Barchasi →
-                      </button>
+                      </Link>
                       <button
-                        onClick={() => setIsAddWordOpen(true)}
+                        onClick={() => {
+                          setEditingWord(null);
+                          setIsAddWordOpen(true);
+                        }}
                         className="px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-all"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -449,9 +479,11 @@ export default function Home() {
                           >
                             <td className="py-3.5 px-3 font-bold text-slate-900 dark:text-white">
                               {word.word_en}
-                              <span className="ml-2 text-[10px] font-mono font-semibold text-slate-400">
-                                {word.academic_level}
-                              </span>
+                              {word.academic_level !== 'none' && (
+                                <span className="ml-2 text-[10px] font-mono font-semibold text-slate-400">
+                                  {word.academic_level}
+                                </span>
+                              )}
                             </td>
                             <td className="py-3.5 px-3 text-slate-600 dark:text-slate-300">
                               {word.translation_uz}
@@ -493,12 +525,12 @@ export default function Home() {
                     <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
                       Tezkor O&apos;yinlar
                     </h2>
-                    <button
-                      onClick={() => setActiveTab('arena')}
+                    <Link
+                      href="/arena"
                       className="text-xs text-teal-600 dark:text-cyan-400 hover:underline font-semibold"
                     >
                       10 ta rejim →
-                    </button>
+                    </Link>
                   </div>
 
                   <div className="space-y-3">
@@ -508,9 +540,9 @@ export default function Home() {
                       { id: 'academic_paraphrase' as GameId, title: 'Akademik Parafraz Duellari', sub: 'AI Band 5 → 8 Baholash', badge: 'Band 8' },
                       { id: 'collocation_matcher' as GameId, title: 'Kollokatsiya Matcher', sub: 'Mitigate → Risk', badge: 'B1–C1' },
                     ].map((g) => (
-                      <button
+                      <Link
                         key={g.id}
-                        onClick={() => handlePlayGame(g.id)}
+                        href={getGameHref(g.id)}
                         className="w-full p-3.5 rounded-2xl glass-pill hover:border-teal-500/40 dark:hover:border-cyan-400/40 text-left flex items-center justify-between transition-all hover:scale-[1.01] active:scale-[0.99] group"
                       >
                         <div>
@@ -525,7 +557,7 @@ export default function Home() {
                           </span>
                           <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 dark:group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
                         </div>
-                      </button>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -553,20 +585,20 @@ export default function Home() {
                   </p>
 
                   <div className="pt-1 flex flex-wrap items-center gap-3">
-                    <button
-                      onClick={() => handlePlayGame('speed_sprint')}
+                    <Link
+                      href={getGameHref('speed_sprint')}
                       className="px-6 py-3 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 dark:from-cyan-400 dark:to-teal-400 text-white dark:text-slate-950 font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-teal-600/20 dark:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
                     >
                       <Zap className="w-4 h-4 fill-current" />
                       <span>Tezkor Sprintni Boshlash</span>
-                    </button>
-                    <button
-                      onClick={() => handlePlayGame('ai_boss_fight')}
+                    </Link>
+                    <Link
+                      href={getGameHref('ai_boss_fight')}
                       className="px-5 py-3 rounded-full glass-pill text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
                     >
                       <Crown className="w-4 h-4 text-violet-500" />
                       <span>AI Boss Fight</span>
-                    </button>
+                    </Link>
                   </div>
                 </div>
 
@@ -637,7 +669,6 @@ export default function Home() {
                           : ''
                       }`}
                     >
-                      {/* Card Header */}
                       <div>
                         <div className="flex items-start justify-between gap-2 mb-4">
                           <div className="flex items-center gap-3">
@@ -669,7 +700,6 @@ export default function Home() {
                           )}
                         </div>
 
-                        {/* Card Body */}
                         <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white mb-2">
                           {game.title}
                         </h3>
@@ -678,7 +708,6 @@ export default function Home() {
                         </p>
                       </div>
 
-                      {/* Card Footer */}
                       <div className="pt-4 border-t border-black/[0.06] dark:border-white/[0.08] space-y-4">
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] text-[11px] font-medium text-slate-600 dark:text-slate-300 max-w-full">
                           <Target className="w-3.5 h-3.5 text-teal-600 dark:text-cyan-400 shrink-0" />
@@ -691,8 +720,12 @@ export default function Home() {
                             <span>{game.duration_seconds}s</span>
                           </span>
 
-                          <button
-                            onClick={() => handlePlayGame(game.id)}
+                          <Link
+                            href={getGameHref(game.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handlePlayGame(game.id);
+                            }}
                             className={`px-5 py-2.5 rounded-full font-bold text-xs flex items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm ${
                               isBoss
                                 ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-violet-500/25'
@@ -703,7 +736,7 @@ export default function Home() {
                           >
                             <span>O&apos;ynash</span>
                             <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
+                          </Link>
                         </div>
                       </div>
                     </article>
@@ -728,7 +761,10 @@ export default function Home() {
                   </div>
 
                   <button
-                    onClick={() => setIsAddWordOpen(true)}
+                    onClick={() => {
+                      setEditingWord(null);
+                      setIsAddWordOpen(true);
+                    }}
                     className="self-start sm:self-auto px-5 py-2.5 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 dark:from-emerald-400 dark:to-cyan-400 text-white dark:text-slate-950 font-bold text-xs flex items-center gap-2 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
                     <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -745,7 +781,40 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-1">
+                {/* Section Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {(
+                    [
+                      { id: 'all', label: "Barcha bo'limlar" },
+                      { id: 'speaking', label: 'Speaking' },
+                      { id: 'reading', label: 'Reading' },
+                      { id: 'writing', label: 'Writing' },
+                      { id: 'listening', label: 'Listening' },
+                      { id: 'general', label: 'General' },
+                    ] as const
+                  ).map((sec) => {
+                    const count =
+                      sec.id === 'all'
+                        ? vocabulary.length
+                        : vocabulary.filter((w) => (w.skill_section || 'general') === sec.id).length;
+                    return (
+                      <button
+                        key={sec.id}
+                        onClick={() => setSelectedSectionFilter(sec.id)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                          selectedSectionFilter === sec.id
+                            ? 'bg-teal-600 dark:bg-cyan-400 text-white dark:text-slate-950 font-bold shadow-sm'
+                            : 'glass-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {sec.label} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Status Filter Pills */}
+                <div className="flex flex-wrap items-center gap-2">
                   {(['all', 'new', 'learning', 'reviewing', 'mastered'] as const).map((st) => (
                     <button
                       key={st}
@@ -756,7 +825,7 @@ export default function Home() {
                           : 'glass-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
-                      {st === 'all' ? `Barchasi (${vocabulary.length})` : st}
+                      {st === 'all' ? `Status: Barchasi (${vocabulary.length})` : st}
                     </button>
                   ))}
                 </div>
@@ -781,7 +850,7 @@ export default function Home() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
                             {word.word_en}
                           </h4>
@@ -792,26 +861,45 @@ export default function Home() {
                           >
                             <Volume2 className="w-4 h-4" />
                           </button>
-                          <span className="text-[11px] text-slate-400 font-mono">{word.phonetic}</span>
+                          {word.phonetic && (
+                            <span className="text-[11px] text-slate-400 font-mono">{word.phonetic}</span>
+                          )}
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 dark:bg-cyan-500/15 border border-teal-500/25 text-teal-700 dark:text-cyan-300 font-bold uppercase">
+                            {word.skill_section || 'general'}
+                          </span>
                         </div>
-                        <p className="text-sm font-semibold text-teal-700 dark:text-cyan-300">
+                        <p className="text-sm font-semibold text-teal-700 dark:text-cyan-300 mt-0.5">
                           {word.translation_uz}
                         </p>
                       </div>
 
-                      <span
-                        className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider tabular-nums ${
-                          word.status === 'mastered'
-                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                            : word.status === 'reviewing'
-                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                            : word.status === 'learning'
-                            ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
-                            : 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30'
-                        }`}
-                      >
-                        {word.status} ({word.mastery_score}%)
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingWord(word);
+                            setIsAddWordOpen(true);
+                          }}
+                          className="p-1.5 rounded-lg glass-pill text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                          title="So'zni tahrirlash"
+                          aria-label="Tahrirlash"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <span
+                          className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider tabular-nums ${
+                            word.status === 'mastered'
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                              : word.status === 'reviewing'
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                              : word.status === 'learning'
+                              ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                              : 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30'
+                          }`}
+                        >
+                          {word.status} ({word.mastery_score}%)
+                        </span>
+                      </div>
                     </div>
 
                     {word.collocations && word.collocations.length > 0 && (
@@ -827,12 +915,22 @@ export default function Home() {
                       </div>
                     )}
 
-                    <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-400 italic">
-                      &ldquo;{word.example_sentence}&rdquo;
-                    </div>
+                    {word.example_sentence && (
+                      <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-400 italic">
+                        &ldquo;{word.example_sentence}&rdquo;
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 font-mono tabular-nums">
-                      <span>Mavzu: {word.topic_tag} • {word.academic_level}</span>
+                      <span>
+                        {[
+                          word.part_of_speech !== 'none' ? word.part_of_speech : null,
+                          word.academic_level !== 'none' ? word.academic_level : null,
+                          word.topic_tag !== 'None' ? word.topic_tag : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' • ') || "Soddalashtirilgan so'z"}
+                      </span>
                       <span>Interval: {word.repetition_interval} kun</span>
                     </div>
                   </div>
@@ -991,6 +1089,12 @@ export default function Home() {
                 </div>
               </section>
 
+              <DailyCalendarAnalytics
+                vocabulary={vocabulary}
+                activityLogs={activityLogs}
+                onPlayAudio={playWordAudio}
+              />
+
               <section className="glass-surface rounded-3xl p-6 space-y-4">
                 <div className="flex items-center gap-2.5">
                   <Trophy className="w-5 h-5 text-amber-500" />
@@ -1074,7 +1178,12 @@ export default function Home() {
 
       <VocabularyModal
         isOpen={isAddWordOpen}
-        onClose={() => setIsAddWordOpen(false)}
+        onClose={() => {
+          setIsAddWordOpen(false);
+          setEditingWord(null);
+        }}
+        editingWord={editingWord}
+        onWordUpdated={refreshState}
         onWordAdded={(newWord) => {
           setVocabulary((prev) => [newWord, ...prev]);
           refreshState();
@@ -1083,67 +1192,67 @@ export default function Home() {
 
       <SpeedSprintModal
         isOpen={activeGameModal === 'speed_sprint'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         words={vocabulary}
         onFinishGame={refreshState}
       />
 
       <SentenceBuilderModal
         isOpen={activeGameModal === 'sentence_builder'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         onFinishGame={refreshState}
       />
 
       <ParaphraseDuelModal
         isOpen={activeGameModal === 'academic_paraphrase'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         onFinishGame={refreshState}
       />
 
       <CollocationMatcherModal
         isOpen={activeGameModal === 'collocation_matcher'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         onFinishGame={refreshState}
       />
 
       <SmartClozeModal
         isOpen={activeGameModal === 'smart_cloze'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         onFinishGame={refreshState}
       />
 
       <ErrorHunterModal
         isOpen={activeGameModal === 'error_hunter'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         onFinishGame={refreshState}
       />
 
       <ListeningSpellerModal
         isOpen={activeGameModal === 'listening_speller'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         words={vocabulary}
         onFinishGame={refreshState}
       />
 
       <SpeakingRapidFireModal
         isOpen={activeGameModal === 'speaking_rapid_fire'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         words={vocabulary}
         onFinishGame={refreshState}
       />
 
       <ThematicCrosswordModal
         isOpen={activeGameModal === 'thematic_crossword'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         onFinishGame={refreshState}
       />
 
       <AiBossFightModal
         isOpen={activeGameModal === 'ai_boss_fight'}
-        onClose={() => setActiveGameModal(null)}
+        onClose={handleCloseGame}
         words={vocabulary}
         onFinishGame={refreshState}
       />
     </div>
   );
-}
+};

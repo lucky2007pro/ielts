@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { UserProfile } from '@/types';
 import {
   Flame,
@@ -69,8 +70,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 via-teal-500 to-indigo-600 p-[1px] shadow-md shadow-cyan-500/20">
+          <Link href="/dashboard" className="flex items-center gap-2.5 group">
+            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 via-teal-500 to-indigo-600 p-[1px] shadow-md shadow-cyan-500/20 group-hover:scale-105 transition-transform">
               <div className="w-full h-full rounded-[11px] bg-white/90 dark:bg-slate-950/90 backdrop-blur-md flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-teal-600 dark:text-cyan-400" />
               </div>
@@ -87,7 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Band {user.target_ielts_band}+ Platform
               </span>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Center: Floating Minimalist Search Bar with ⌘K */}

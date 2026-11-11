@@ -1,16 +1,19 @@
 export type WordStatus = 'new' | 'learning' | 'reviewing' | 'mastered';
 
+export type IeltsSkillSection = 'speaking' | 'reading' | 'writing' | 'listening' | 'general';
+
 export interface VocabularyWord {
   id: string;
   word_en: string;
   translation_uz: string;
   phonetic?: string;
-  part_of_speech: 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase' | 'idiom';
-  academic_level: 'B1' | 'B2' | 'C1' | 'C2';
+  skill_section?: IeltsSkillSection;
+  part_of_speech: 'none' | 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase' | 'idiom';
+  academic_level: 'none' | 'B1' | 'B2' | 'C1' | 'C2';
   collocations: string[];
-  example_sentence: string;
+  example_sentence?: string;
   example_translation_uz?: string;
-  topic_tag: 'Environment' | 'Technology' | 'Education' | 'Society' | 'Health' | 'General';
+  topic_tag: 'None' | 'Environment' | 'Technology' | 'Education' | 'Society' | 'Health' | 'General';
   mastery_score: number; // 0 - 100
   repetition_interval: number; // in days
   ease_factor: number; // SM-2 default 2.5
@@ -19,6 +22,21 @@ export interface VocabularyWord {
   last_reviewed_at?: string;
   created_at: string;
   status: WordStatus;
+}
+
+export interface DailyGameEntry {
+  game_id: string;
+  score: number;
+  xp_earned: number;
+  timestamp: string;
+}
+
+export interface DailyActivityLog {
+  date: string; // YYYY-MM-DD
+  words_added: number;
+  games_played: number;
+  xp_earned: number;
+  game_entries: DailyGameEntry[];
 }
 
 export interface UserProfile {
