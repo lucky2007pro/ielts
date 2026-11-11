@@ -64,6 +64,7 @@ class GameScoreSubmit(BaseModel):
     score: int
     xp_earned: int
     mistakes: List[Dict[str, Any]] = []
+    email: Optional[str] = None
 
 class UserProfileResponse(BaseModel):
     id: int

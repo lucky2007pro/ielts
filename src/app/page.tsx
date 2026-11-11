@@ -9,6 +9,12 @@ import { SpeedSprintModal } from '@/components/games/SpeedSprintModal';
 import { SentenceBuilderModal } from '@/components/games/SentenceBuilderModal';
 import { ParaphraseDuelModal } from '@/components/games/ParaphraseDuelModal';
 import { CollocationMatcherModal } from '@/components/games/CollocationMatcherModal';
+import { SmartClozeModal } from '@/components/games/SmartClozeModal';
+import { ErrorHunterModal } from '@/components/games/ErrorHunterModal';
+import { ListeningSpellerModal } from '@/components/games/ListeningSpellerModal';
+import { SpeakingRapidFireModal } from '@/components/games/SpeakingRapidFireModal';
+import { ThematicCrosswordModal } from '@/components/games/ThematicCrosswordModal';
+import { AiBossFightModal } from '@/components/games/AiBossFightModal';
 import {
   getUserProfile,
   getVocabularyList,
@@ -58,12 +64,22 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Swords: <Swords className="w-5 h-5" />,
 };
 
+interface LeaderboardEntry {
+  id?: string | number;
+  name: string;
+  email?: string;
+  level: number;
+  target_ielts_band: number;
+  xp_points: number;
+}
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   const [vocabulary, setVocabulary] = useState<VocabularyWord[]>([]);
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
@@ -123,11 +139,32 @@ export default function Home() {
         setUser(getUserProfile());
         setVocabulary(getVocabularyList());
       });
+    // Load leaderboard
+    fetch('/api/leaderboard')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.entries)) {
+          setLeaderboard(data.entries);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const fetchLeaderboard = () => {
+    fetch('/api/leaderboard')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.entries)) {
+          setLeaderboard(data.entries);
+        }
+      })
+      .catch(() => {});
+  };
 
   const refreshState = () => {
     setUser(getUserProfile());
     setVocabulary(getVocabularyList());
+    fetchLeaderboard();
   };
 
   const handleAuthSuccess = (sessionUser: any) => {
@@ -210,6 +247,12 @@ export default function Home() {
     return true;
   });
 
+  const vocabPct =
+    vocabulary.length > 0
+      ? Math.round(vocabulary.reduce((sum, w) => sum + (w.mastery_score || 0), 0) / vocabulary.length)
+      : 0;
+  const dailyGoalPct = Math.min(100, user.stats.games_played * 20 + user.stats.words_mastered * 10);
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center">
@@ -234,6 +277,7 @@ export default function Home() {
         onOpenAuth={() => setIsAuthModalOpen(true)}
         mobileOpen={mobileMenuOpen}
         setMobileOpen={setMobileMenuOpen}
+        dailyProgressPct={dailyGoalPct}
       />
 
       {/* Right Content Area */}
@@ -299,41 +343,46 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Circular Skill Rings Row (Matching PDF Page 2 & Page 8) */}
+              {/* Circular Skill Rings Row */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Vocabulary', sub: `${vocabulary.length} ta aktiv so'z`, pct: 74, color: '#06b6d4', textClass: 'text-cyan-400', offset: 32.6 },
-                  { label: 'Grammar', sub: 'Range & Accuracy', pct: user.stats.grammar_score, color: '#a855f7', textClass: 'text-purple-400', offset: 44 },
-                  { label: 'Writing', sub: 'Task 1 & Task 2', pct: user.stats.writing_score, color: '#f59e0b', textClass: 'text-amber-400', offset: 56.5 },
-                  { label: 'Speaking', sub: 'Fluency & Lexis', pct: user.stats.speaking_score, color: '#10b981', textClass: 'text-emerald-400', offset: 50.2 },
-                ].map((skill) => (
-                  <div
-                    key={skill.label}
-                    className="p-4 rounded-2xl bg-[#111827] border border-slate-800/90 flex items-center gap-3.5 hover:border-slate-700 transition-all"
-                  >
-                    <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
-                      <svg className="w-14 h-14 transform -rotate-90">
-                        <circle cx="28" cy="28" r="20" stroke="#1e293b" strokeWidth="4.5" fill="transparent" />
-                        <circle
-                          cx="28"
-                          cy="28"
-                          r="20"
-                          stroke={skill.color}
-                          strokeWidth="4.5"
-                          strokeDasharray="125.6"
-                          strokeDashoffset={skill.offset}
-                          strokeLinecap="round"
-                          fill="transparent"
-                        />
-                      </svg>
-                      <span className={`absolute text-xs font-black ${skill.textClass}`}>{skill.pct}%</span>
+                  { label: 'Vocabulary', sub: `${vocabulary.length} ta aktiv so'z`, pct: vocabPct, color: '#06b6d4', textClass: 'text-cyan-400' },
+                  { label: 'Grammar', sub: 'Range & Accuracy', pct: user.stats.grammar_score, color: '#a855f7', textClass: 'text-purple-400' },
+                  { label: 'Writing', sub: 'Task 1 & Task 2', pct: user.stats.writing_score, color: '#f59e0b', textClass: 'text-amber-400' },
+                  { label: 'Speaking', sub: 'Fluency & Lexis', pct: user.stats.speaking_score, color: '#10b981', textClass: 'text-emerald-400' },
+                ].map((skill) => {
+                  const clampedPct = Math.max(0, Math.min(100, skill.pct || 0));
+                  const offset = +(125.6 * (1 - clampedPct / 100)).toFixed(1);
+                  return (
+                    <div
+                      key={skill.label}
+                      className="p-4 rounded-2xl bg-[#111827] border border-slate-800/90 flex items-center gap-3.5 hover:border-slate-700 transition-all"
+                    >
+                      <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
+                        <svg className="w-14 h-14 transform -rotate-90">
+                          <circle cx="28" cy="28" r="20" stroke="#1e293b" strokeWidth="4.5" fill="transparent" />
+                          <circle
+                            cx="28"
+                            cy="28"
+                            r="20"
+                            stroke={skill.color}
+                            strokeWidth="4.5"
+                            strokeDasharray="125.6"
+                            strokeDashoffset={offset}
+                            strokeLinecap="round"
+                            fill="transparent"
+                            className="transition-all duration-500"
+                          />
+                        </svg>
+                        <span className={`absolute text-xs font-black ${skill.textClass}`}>{clampedPct}%</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">{skill.label}</p>
+                        <p className="text-[11px] text-slate-400">{skill.sub}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{skill.label}</p>
-                      <p className="text-[11px] text-slate-400">{skill.sub}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Split Row: Featured Games + My Vocabulary Bank Table (Page 8 Layout) */}
@@ -543,8 +592,10 @@ export default function Home() {
                               <span className="text-[11px] font-bold text-cyan-400">{game.level_badge}</span>
                             </div>
                           </div>
-                          {game.active_players_count && (
-                            <span className="text-[10px] text-slate-500 font-mono">{game.active_players_count}</span>
+                          {game.xp_reward && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono font-bold">
+                              {game.xp_reward}
+                            </span>
                           )}
                         </div>
 
@@ -846,14 +897,29 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-2">
-                  {[
-                    { rank: 1, name: 'Madina K.', level: 18, band: 8.0, xp: 16420 },
-                    { rank: 2, name: 'Sardorbek R.', level: 16, band: 7.5, xp: 14190 },
-                    { rank: 3, name: user.name, level: user.level, band: user.target_ielts_band, xp: user.xp_points, isSelf: true },
-                    { rank: 4, name: 'Dilnoza M.', level: 12, band: 7.0, xp: 10840 },
-                  ]
-                    .sort((a, b) => b.xp - a.xp)
-                    .map((entry, idx) => (
+                  {(() => {
+                    const selfEmail = user.email?.toLowerCase();
+                    const others = leaderboard.filter(
+                      (item) => (item.email || '').toLowerCase() !== selfEmail
+                    );
+                    const combined = [
+                      ...others.map((item) => ({
+                        name: item.name,
+                        level: item.level,
+                        band: item.target_ielts_band,
+                        xp: item.xp_points,
+                        isSelf: false,
+                      })),
+                      {
+                        name: user.name,
+                        level: user.level,
+                        band: user.target_ielts_band,
+                        xp: user.xp_points,
+                        isSelf: true,
+                      },
+                    ].sort((a, b) => b.xp - a.xp);
+
+                    return combined.map((entry, idx) => (
                       <div
                         key={entry.name + idx}
                         className={`p-3.5 rounded-2xl border flex items-center justify-between ${
@@ -877,7 +943,8 @@ export default function Home() {
                         </div>
                         <span className="text-xs font-mono font-black text-amber-400">{entry.xp} XP</span>
                       </div>
-                    ))}
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
@@ -928,6 +995,45 @@ export default function Home() {
       <CollocationMatcherModal
         isOpen={activeGameModal === 'collocation_matcher'}
         onClose={() => setActiveGameModal(null)}
+        onFinishGame={refreshState}
+      />
+
+      <SmartClozeModal
+        isOpen={activeGameModal === 'smart_cloze'}
+        onClose={() => setActiveGameModal(null)}
+        onFinishGame={refreshState}
+      />
+
+      <ErrorHunterModal
+        isOpen={activeGameModal === 'error_hunter'}
+        onClose={() => setActiveGameModal(null)}
+        onFinishGame={refreshState}
+      />
+
+      <ListeningSpellerModal
+        isOpen={activeGameModal === 'listening_speller'}
+        onClose={() => setActiveGameModal(null)}
+        words={vocabulary}
+        onFinishGame={refreshState}
+      />
+
+      <SpeakingRapidFireModal
+        isOpen={activeGameModal === 'speaking_rapid_fire'}
+        onClose={() => setActiveGameModal(null)}
+        words={vocabulary}
+        onFinishGame={refreshState}
+      />
+
+      <ThematicCrosswordModal
+        isOpen={activeGameModal === 'thematic_crossword'}
+        onClose={() => setActiveGameModal(null)}
+        onFinishGame={refreshState}
+      />
+
+      <AiBossFightModal
+        isOpen={activeGameModal === 'ai_boss_fight'}
+        onClose={() => setActiveGameModal(null)}
+        words={vocabulary}
         onFinishGame={refreshState}
       />
     </div>

@@ -8,17 +8,17 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String, default="Alijon T.")
-    email = Column(String, unique=True, index=True, default="alijon@lexiai.uz")
+    full_name = Column(String, default="Mehmon")
+    email = Column(String, unique=True, index=True, default="guest@lexiai.uz")
     avatar_url = Column(String, nullable=True)
     auth_provider = Column(String, default="local")
     google_id = Column(String, nullable=True, index=True)
     password_hash = Column(String, nullable=True)
-    current_level = Column(String, default="B2")
+    current_level = Column(String, default="B1")
     target_ielts_band = Column(Float, default=7.5)
-    xp_points = Column(Integer, default=12450)
-    level = Column(Integer, default=14)
-    streak_days = Column(Integer, default=14)
+    xp_points = Column(Integer, default=0)
+    level = Column(Integer, default=1)
+    streak_days = Column(Integer, default=0)
     last_study_date = Column(DateTime, default=datetime.utcnow)
 
     vocabulary = relationship("VocabularyWord", back_populates="user")

@@ -65,7 +65,7 @@ export interface GameModeInfo {
   description_uz: string;
   ielts_benefit: string;
   icon: string;
-  active_players_count?: string;
+  xp_reward: string;
   is_ready: boolean;
 }
 

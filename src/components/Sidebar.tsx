@@ -25,6 +25,7 @@ interface SidebarProps {
   onOpenAuth: () => void;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
+  dailyProgressPct?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -35,7 +36,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenAuth,
   mobileOpen,
   setMobileOpen,
+  dailyProgressPct,
 }) => {
+  const computedGoalPct = Math.max(
+    0,
+    Math.min(
+      100,
+      dailyProgressPct ??
+        user.stats.games_played * 20 + user.stats.words_mastered * 10
+    )
+  );
   const navItems: Array<{
     id: AppTab;
     label: string;
@@ -163,10 +173,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 Kunlik Maqsad
               </span>
-              <span className="text-[11px] text-emerald-400 font-bold">74%</span>
+              <span className="text-[11px] text-emerald-400 font-bold">{computedGoalPct}%</span>
             </div>
             <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full w-[74%] rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400" />
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all duration-500"
+                style={{ width: `${computedGoalPct}%` }}
+              />
             </div>
             <p className="text-[10px] text-slate-400">
               Band {user.target_ielts_band} ga chiqish uchun kuniga 15 daqiqa mashq qiling

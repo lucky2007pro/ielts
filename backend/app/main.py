@@ -33,19 +33,6 @@ async def lifespan(app: FastAPI):
     # Auto-seed initial IELTS words on startup if empty
     db = SessionLocal()
     try:
-        if db.query(User).count() == 0:
-            user = User(
-                full_name="Alijon T.",
-                email="alijon@lexiai.uz",
-                current_level="B2",
-                target_ielts_band=7.5,
-                xp_points=12450,
-                level=14,
-                streak_days=14,
-            )
-            db.add(user)
-            db.commit()
-
         if db.query(VocabularyWord).count() == 0:
             from app.routers.vocabulary import seed_initial_words
             seed_initial_words(db)

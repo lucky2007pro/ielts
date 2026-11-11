@@ -32,10 +32,24 @@ def _verify_password(password: str, stored_hash: str) -> bool:
     return hmac.compare_digest(dk.hex(), expected_hex)
 
 
+def _calc_skill_score(logs: list[GameLog], game_types: tuple[str, ...]) -> int:
+    relevant = [log for log in logs if log.game_type in game_types]
+    if not relevant:
+        return 0
+    avg_score = sum(max(0, min(100, log.score)) for log in relevant) / len(relevant)
+    volume_bonus = min(20, len(relevant) * 4)
+    return min(100, round(avg_score * 0.8 + volume_bonus))
+
+
 def build_profile_response(user: User, db: Session) -> UserProfileResponse:
     total_words = db.query(VocabularyWord).count()
     mastered_words = db.query(VocabularyWord).filter(VocabularyWord.status == "mastered").count()
-    games_played = db.query(GameLog).filter(GameLog.user_id == user.id).count()
+    user_logs = db.query(GameLog).filter(GameLog.user_id == user.id).all()
+    games_played = len(user_logs)
+
+    grammar_score = _calc_skill_score(user_logs, ("smart_cloze", "error_hunter", "sentence_builder"))
+    writing_score = _calc_skill_score(user_logs, ("academic_paraphrase", "ai_boss_fight", "thematic_crossword"))
+    speaking_score = _calc_skill_score(user_logs, ("speaking_rapid_fire", "listening_speller"))
 
     return UserProfileResponse(
         id=user.id,
@@ -52,9 +66,9 @@ def build_profile_response(user: User, db: Session) -> UserProfileResponse:
         stats={
             "words_learned": total_words,
             "words_mastered": mastered_words,
-            "grammar_score": 65,
-            "writing_score": 55,
-            "speaking_score": 60,
+            "grammar_score": grammar_score,
+            "writing_score": writing_score,
+            "speaking_score": speaking_score,
             "games_played": games_played,
         },
     )
@@ -74,7 +88,7 @@ def google_sync(req: GoogleSyncRequest, db: Session = Depends(get_db)):
             google_id=req.google_id,
             current_level="B1",
             target_ielts_band=7.5,
-            xp_points=100,
+            xp_points=0,
             level=1,
             streak_days=1,
             last_study_date=datetime.utcnow(),
@@ -108,7 +122,7 @@ def register(req: UserRegisterRequest, db: Session = Depends(get_db)):
         auth_provider="local",
         current_level=req.current_level,
         target_ielts_band=req.target_ielts_band,
-        xp_points=100,
+        xp_points=0,
         level=1,
         streak_days=1,
         last_study_date=datetime.utcnow(),

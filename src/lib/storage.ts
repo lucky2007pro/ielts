@@ -16,23 +16,23 @@ export function setActiveUserScope(email?: string | null) {
 }
 
 export const DEFAULT_USER: UserProfile = {
-  id: 'u-1',
-  name: 'Alijon T.',
-  email: 'alijon@lexiai.uz',
+  id: 'u-guest',
+  name: 'Mehmon',
+  email: 'guest@lexiai.uz',
   auth_provider: 'guest',
-  current_level: 'B2',
+  current_level: 'B1',
   target_ielts_band: 7.5,
-  xp_points: 12450,
-  level: 14,
-  streak_days: 14,
-  last_study_date: '2026-11-10T00:00:00.000Z',
+  xp_points: 0,
+  level: 1,
+  streak_days: 0,
+  last_study_date: '2026-01-01T00:00:00.000Z',
   stats: {
-    words_learned: 8,
-    words_mastered: 2,
-    grammar_score: 65,
-    writing_score: 55,
-    speaking_score: 60,
-    games_played: 42,
+    words_learned: INITIAL_VOCABULARY.length,
+    words_mastered: 0,
+    grammar_score: 0,
+    writing_score: 0,
+    speaking_score: 0,
+    games_played: 0,
   },
 };
 
@@ -78,16 +78,16 @@ export function syncSessionUserToProfile(sessionUser: {
         auth_provider: sessionUser.auth_provider || 'local',
         current_level: sessionUser.current_level || 'B1',
         target_ielts_band: sessionUser.target_ielts_band || 7.5,
-        xp_points: 250,
+        xp_points: 0,
         level: 1,
         streak_days: 1,
         last_study_date: new Date().toISOString(),
         stats: {
           words_learned: INITIAL_VOCABULARY.length,
           words_mastered: INITIAL_VOCABULARY.filter((w) => w.status === 'mastered').length,
-          grammar_score: 55,
-          writing_score: 50,
-          speaking_score: 52,
+          grammar_score: 0,
+          writing_score: 0,
+          speaking_score: 0,
           games_played: 0,
         },
       }
@@ -172,7 +172,26 @@ export function recordWordReview(wordId: string, quality: number): void {
   saveUserProfile(profile);
 }
 
-export function awardGameXP(xp: number, _gameId: string): UserProfile {
+export function updateSkillScore(
+  skill: 'grammar' | 'writing' | 'speaking',
+  earnedScore: number
+): UserProfile {
+  const profile = getUserProfile();
+  const clamped = Math.max(0, Math.min(100, Math.round(earnedScore)));
+  const field = `${skill}_score` as 'grammar_score' | 'writing_score' | 'speaking_score';
+  const current = profile.stats[field] || 0;
+  profile.stats[field] =
+    current === 0 ? clamped : Math.min(100, Math.max(current, Math.round(current * 0.55 + clamped * 0.45)));
+  saveUserProfile(profile);
+  return profile;
+}
+
+export function awardGameXP(
+  xp: number,
+  gameId: string,
+  score: number = xp,
+  mistakes: Array<Record<string, unknown>> = []
+): UserProfile {
   const profile = getUserProfile();
   profile.xp_points += xp;
   profile.level = Math.floor(profile.xp_points / 800) + 1;
@@ -181,7 +200,9 @@ export function awardGameXP(xp: number, _gameId: string): UserProfile {
   const lastDate = new Date(profile.last_study_date);
   const now = new Date();
   const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
-  if (diffDays === 1) {
+  if (profile.streak_days === 0) {
+    profile.streak_days = 1;
+  } else if (diffDays === 1) {
     profile.streak_days += 1;
   } else if (diffDays > 1) {
     profile.streak_days = 1;
@@ -189,5 +210,20 @@ export function awardGameXP(xp: number, _gameId: string): UserProfile {
   profile.last_study_date = now.toISOString();
 
   saveUserProfile(profile);
+
+  if (typeof window !== 'undefined' && profile.auth_provider !== 'guest' && profile.email) {
+    fetch('/api/games/submit-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        game_type: gameId,
+        score,
+        xp_earned: xp,
+        mistakes,
+        email: profile.email,
+      }),
+    }).catch(() => {});
+  }
+
   return profile;
 }

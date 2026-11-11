@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, Zap, Volume2, ArrowRight, RotateCcw, Trophy, CheckCircle, AlertCircle } from 'lucide-react';
 import { VocabularyWord } from '@/types';
 import { recordWordReview, awardGameXP } from '@/lib/storage';
@@ -72,6 +72,19 @@ export const SpeedSprintModal: React.FC<SpeedSprintModalProps> = ({
   }, [isOpen, timeLeft, isGameOver]);
 
   const currentWord = gameWords[currentIndex];
+
+  const scrambledLetters = useMemo(() => {
+    if (!currentWord) return [];
+    const chars = currentWord.word_en.toLowerCase().split('');
+    // Deterministic seeded Fisher-Yates shuffle per word + index
+    let seed = (currentIndex + 1) * 37 + chars.length * 13;
+    for (let i = chars.length - 1; i > 0; i--) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      const j = seed % (i + 1);
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+    return chars;
+  }, [currentWord?.id, currentWord?.word_en, currentIndex]);
 
   const handleGameOver = () => {
     setIsGameOver(true);
@@ -268,11 +281,7 @@ export const SpeedSprintModal: React.FC<SpeedSprintModalProps> = ({
               {/* Letter Tiles (Quick Helper) */}
               {currentWord && (
                 <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 pt-2">
-                  {currentWord.word_en
-                    .toLowerCase()
-                    .split('')
-                    .sort(() => 0.4 - Math.random())
-                    .map((char, idx) => (
+                  {scrambledLetters.map((char, idx) => (
                       <button
                         key={`${char}-${idx}`}
                         type="button"
