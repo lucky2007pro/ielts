@@ -37,7 +37,6 @@ import {
   Swords,
   Search,
   Plus,
-  Play,
   Volume2,
   Brain,
   Sparkles,
@@ -49,6 +48,8 @@ import {
   ArrowRight,
   ShieldCheck,
   LogIn,
+  Clock,
+  Crown,
 } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -102,10 +103,20 @@ export default function Home() {
   const [isCoachAnalyzing, setIsCoachAnalyzing] = useState(false);
   const [coachFeedback, setCoachFeedback] = useState<any | null>(null);
 
+  const fetchLeaderboard = () => {
+    fetch('/api/leaderboard')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.entries)) {
+          setLeaderboard(data.entries);
+        }
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     setMounted(true);
 
-    // Check URL auth feedback params
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const errParam = params.get('auth_error');
@@ -118,7 +129,6 @@ export default function Home() {
       }
     }
 
-    // Load active session
     fetch('/api/auth/session')
       .then((res) => res.json())
       .then((data) => {
@@ -139,27 +149,9 @@ export default function Home() {
         setUser(getUserProfile());
         setVocabulary(getVocabularyList());
       });
-    // Load leaderboard
-    fetch('/api/leaderboard')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data.entries)) {
-          setLeaderboard(data.entries);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
-  const fetchLeaderboard = () => {
-    fetch('/api/leaderboard')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data.entries)) {
-          setLeaderboard(data.entries);
-        }
-      })
-      .catch(() => {});
-  };
+    fetchLeaderboard();
+  }, []);
 
   const refreshState = () => {
     setUser(getUserProfile());
@@ -173,6 +165,7 @@ export default function Home() {
     setIsAuthenticated(true);
     setAuthError(null);
     setVocabulary(getVocabularyList());
+    fetchLeaderboard();
   };
 
   const handleLogout = async () => {
@@ -255,78 +248,90 @@ export default function Home() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-[#F1F5F9] to-[#E2E8F0] dark:bg-none dark:bg-[#080B11] flex items-center justify-center transition-colors">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-black text-xl animate-pulse">
-            L
+          <div className="w-12 h-12 rounded-2xl glass-surface flex items-center justify-center text-teal-600 dark:text-cyan-400 animate-pulse">
+            <Sparkles className="w-6 h-6" />
           </div>
-          <span className="text-xs text-slate-400 font-mono tracking-wider">LexiAI yuklanmoqda...</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-mono tracking-wider">
+            LexiAI yuklanmoqda...
+          </span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex">
-      {/* Left Sidebar (Matching PDF Dashboard Layout) */}
-      <Sidebar
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#F8FAFC] via-[#F1F5F9] to-[#E2E8F0] dark:bg-none dark:bg-[#080B11] text-slate-900 dark:text-slate-100 transition-colors duration-300 ease-in-out relative overflow-x-clip">
+      {/* Subtle Ambient Refraction Glows */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div className="absolute -top-32 -right-24 w-[420px] h-[420px] rounded-full bg-cyan-400/15 dark:bg-cyan-500/10 blur-[110px]" />
+        <div className="absolute top-1/3 -left-32 w-[380px] h-[380px] rounded-full bg-teal-400/15 dark:bg-violet-600/10 blur-[120px]" />
+      </div>
+
+      {/* Top Navigation Bar */}
+      <Navbar
         user={user}
         isAuthenticated={isAuthenticated}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        onOpenAddWord={() => setIsAddWordOpen(true)}
         onOpenAuth={() => setIsAuthModalOpen(true)}
-        mobileOpen={mobileMenuOpen}
-        setMobileOpen={setMobileMenuOpen}
-        dailyProgressPct={dailyGoalPct}
+        onToggleMobileMenu={() => setMobileMenuOpen(true)}
+        quickSearch={searchQuery}
+        onQuickSearchChange={handleQuickSearch}
       />
 
-      {/* Right Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <Navbar
+      {/* Body Layout: Sidebar Rail + Main Content */}
+      <div className="flex flex-1 relative z-10">
+        <Sidebar
           user={user}
           isAuthenticated={isAuthenticated}
-          onOpenAddWord={() => setIsAddWordOpen(true)}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
           onOpenAuth={() => setIsAuthModalOpen(true)}
-          onToggleMobileMenu={() => setMobileMenuOpen(true)}
-          quickSearch={searchQuery}
-          onQuickSearchChange={handleQuickSearch}
+          mobileOpen={mobileMenuOpen}
+          setMobileOpen={setMobileMenuOpen}
+          dailyProgressPct={dailyGoalPct}
         />
 
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <main className="flex-1 min-w-0 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
           {/* ================= TAB 0: DASHBOARD (OVERVIEW) ================= */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               {/* Hero Welcome Card */}
-              <div className="p-6 rounded-3xl bg-gradient-to-r from-[#11192c] via-[#131d35] to-cyan-950/50 border border-slate-800/90 flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative overflow-hidden">
-                <div className="space-y-2 relative z-10">
+              <section className="glass-surface rounded-3xl p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative overflow-hidden">
+                <div className="space-y-3 relative z-10">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold">
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold tabular-nums">
                       Target: IELTS Band {user.target_ielts_band}
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[11px] font-semibold">
+                    <span className="px-3 py-1 rounded-full glass-pill text-slate-700 dark:text-slate-300 text-[11px] font-semibold">
                       Daraja: {user.current_level}
                     </span>
                     {isAuthenticated && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 text-[11px] font-semibold inline-flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3" />
+                      <span className="px-3 py-1 rounded-full bg-teal-500/10 dark:bg-cyan-500/15 border border-teal-500/25 dark:border-cyan-500/30 text-teal-700 dark:text-cyan-300 text-[11px] font-semibold inline-flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5" />
                         {user.auth_provider === 'google' ? 'Google bilan ulangan' : 'Akkount faol'}
                       </span>
                     )}
                   </div>
 
-                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                    Xush kelibsiz, {user.name}! 👋
+                  <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    Xush kelibsiz, {user.name}
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                    Shaxsiy lug&apos;at bazangizda <strong>{vocabulary.length} ta</strong> akademik so&apos;z mavjud. Bugungi maqsadingiz: 10 ta so&apos;zni takrorlash va Parafraz Duelida Band 7.5+ olish.
+                  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
+                    Shaxsiy lug&apos;at bazangizda{' '}
+                    <strong className="font-mono tabular-nums text-slate-900 dark:text-white">
+                      {vocabulary.length} ta
+                    </strong>{' '}
+                    akademik so&apos;z mavjud. Bugungi maqsadingiz: 10 ta so&apos;zni takrorlash va Parafraz Duelida Band 7.5+ olish.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 relative z-10">
+                <div className="flex flex-wrap items-center gap-3 relative z-10 shrink-0">
                   {!isAuthenticated && (
                     <button
                       onClick={() => setIsAuthModalOpen(true)}
-                      className="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs flex items-center gap-2 shadow-lg transition-all active:scale-95"
+                      className="px-5 py-3 rounded-full bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs flex items-center gap-2 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
                     >
                       <LogIn className="w-4 h-4" />
                       <span>Google bilan kirish</span>
@@ -335,32 +340,39 @@ export default function Home() {
 
                   <button
                     onClick={() => handlePlayGame('speed_sprint')}
-                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-cyan-500/20 active:scale-95 transition-all"
+                    className="px-6 py-3 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 dark:from-emerald-400 dark:to-cyan-400 text-white dark:text-slate-950 font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-teal-600/20 dark:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
-                    <Zap className="w-4 h-4 fill-slate-950" />
+                    <Zap className="w-4 h-4 fill-current" />
                     <span>Mashqni Boshlash</span>
                   </button>
                 </div>
-              </div>
+              </section>
 
               {/* Circular Skill Rings Row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {[
-                  { label: 'Vocabulary', sub: `${vocabulary.length} ta aktiv so'z`, pct: vocabPct, color: '#06b6d4', textClass: 'text-cyan-400' },
-                  { label: 'Grammar', sub: 'Range & Accuracy', pct: user.stats.grammar_score, color: '#a855f7', textClass: 'text-purple-400' },
-                  { label: 'Writing', sub: 'Task 1 & Task 2', pct: user.stats.writing_score, color: '#f59e0b', textClass: 'text-amber-400' },
-                  { label: 'Speaking', sub: 'Fluency & Lexis', pct: user.stats.speaking_score, color: '#10b981', textClass: 'text-emerald-400' },
+                  { label: 'Vocabulary', sub: `${vocabulary.length} ta aktiv so'z`, pct: vocabPct, color: '#06b6d4', textClass: 'text-teal-700 dark:text-cyan-400' },
+                  { label: 'Grammar', sub: 'Range & Accuracy', pct: user.stats.grammar_score, color: '#8b5cf6', textClass: 'text-violet-700 dark:text-violet-400' },
+                  { label: 'Writing', sub: 'Task 1 & Task 2', pct: user.stats.writing_score, color: '#f59e0b', textClass: 'text-amber-700 dark:text-amber-400' },
+                  { label: 'Speaking', sub: 'Fluency & Lexis', pct: user.stats.speaking_score, color: '#10b981', textClass: 'text-emerald-700 dark:text-emerald-400' },
                 ].map((skill) => {
                   const clampedPct = Math.max(0, Math.min(100, skill.pct || 0));
                   const offset = +(125.6 * (1 - clampedPct / 100)).toFixed(1);
                   return (
                     <div
                       key={skill.label}
-                      className="p-4 rounded-2xl bg-[#111827] border border-slate-800/90 flex items-center gap-3.5 hover:border-slate-700 transition-all"
+                      className="glass-surface rounded-2xl p-5 flex items-center gap-4 hover:-translate-y-0.5 transition-all duration-200"
                     >
                       <div className="relative w-14 h-14 flex items-center justify-center shrink-0">
                         <svg className="w-14 h-14 transform -rotate-90">
-                          <circle cx="28" cy="28" r="20" stroke="#1e293b" strokeWidth="4.5" fill="transparent" />
+                          <circle
+                            cx="28"
+                            cy="28"
+                            r="20"
+                            className="stroke-slate-200 dark:stroke-slate-800/90"
+                            strokeWidth="4.5"
+                            fill="transparent"
+                          />
                           <circle
                             cx="28"
                             cy="28"
@@ -374,36 +386,44 @@ export default function Home() {
                             className="transition-all duration-500"
                           />
                         </svg>
-                        <span className={`absolute text-xs font-black ${skill.textClass}`}>{clampedPct}%</span>
+                        <span className={`absolute text-xs font-mono font-bold tabular-nums ${skill.textClass}`}>
+                          {clampedPct}%
+                        </span>
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white">{skill.label}</p>
-                        <p className="text-[11px] text-slate-400">{skill.sub}</p>
+                        <p className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
+                          {skill.label}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{skill.sub}</p>
                       </div>
                     </div>
                   );
                 })}
-              </div>
+              </section>
 
-              {/* Split Row: Featured Games + My Vocabulary Bank Table (Page 8 Layout) */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              {/* Split Row: My Vocabulary Bank + Quick Play Arena */}
+              <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 {/* Left 2 cols: My Vocabulary Preview Table */}
-                <div className="xl:col-span-2 rounded-3xl bg-[#111827] border border-slate-800/90 p-5 space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="xl:col-span-2 glass-surface rounded-3xl p-6 space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-base font-extrabold text-white">My Vocabulary Bank</h2>
-                      <p className="text-xs text-slate-400">SM-2 algoritmi navbatidagi asosiy akademik so&apos;zlar</p>
+                      <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                        My Vocabulary Bank
+                      </h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        SM-2 algoritmi navbatidagi asosiy akademik so&apos;zlar
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <button
                         onClick={() => setActiveTab('vocabulary')}
-                        className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold"
+                        className="text-xs text-teal-600 dark:text-cyan-400 hover:underline font-semibold"
                       >
                         Barchasi →
                       </button>
                       <button
                         onClick={() => setIsAddWordOpen(true)}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1"
+                        className="px-3.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-all"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         Add Word
@@ -414,42 +434,48 @@ export default function Home() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
-                          <th className="py-2.5 px-3">English Word</th>
-                          <th className="py-2.5 px-3">Uzbek Translation</th>
-                          <th className="py-2.5 px-3">Mastery Status</th>
-                          <th className="py-2.5 px-3 text-right">Audio</th>
+                        <tr className="border-b border-black/[0.06] dark:border-white/[0.08] text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          <th className="py-2.5 px-3 font-semibold">English Word</th>
+                          <th className="py-2.5 px-3 font-semibold">Uzbek Translation</th>
+                          <th className="py-2.5 px-3 font-semibold">Mastery Status</th>
+                          <th className="py-2.5 px-3 text-right font-semibold">Audio</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800/70 text-xs">
+                      <tbody className="divide-y divide-black/[0.05] dark:divide-white/[0.06] text-xs">
                         {vocabulary.slice(0, 5).map((word) => (
-                          <tr key={word.id} className="hover:bg-slate-900/60 transition-colors">
-                            <td className="py-3 px-3 font-bold text-white">
+                          <tr
+                            key={word.id}
+                            className="hover:bg-slate-100/70 dark:hover:bg-white/[0.03] transition-colors"
+                          >
+                            <td className="py-3.5 px-3 font-bold text-slate-900 dark:text-white">
                               {word.word_en}
-                              <span className="ml-1.5 text-[10px] font-normal text-slate-500">
+                              <span className="ml-2 text-[10px] font-mono font-semibold text-slate-400">
                                 {word.academic_level}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-slate-300">{word.translation_uz}</td>
-                            <td className="py-3 px-3">
+                            <td className="py-3.5 px-3 text-slate-600 dark:text-slate-300">
+                              {word.translation_uz}
+                            </td>
+                            <td className="py-3.5 px-3">
                               <span
                                 className={`inline-block text-[10px] px-2.5 py-0.5 rounded-full font-bold capitalize ${
                                   word.status === 'mastered'
-                                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25'
                                     : word.status === 'reviewing'
-                                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25'
                                     : word.status === 'learning'
-                                    ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
-                                    : 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+                                    ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/25'
+                                    : 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/25'
                                 }`}
                               >
                                 {word.status}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-right">
+                            <td className="py-3.5 px-3 text-right">
                               <button
                                 onClick={() => playWordAudio(word.word_en)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800"
+                                className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-cyan-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition-colors"
+                                aria-label="Talaffuzni tinglash"
                               >
                                 <Volume2 className="w-4 h-4" />
                               </button>
@@ -462,268 +488,326 @@ export default function Home() {
                 </div>
 
                 {/* Right col: Quick Play Arena Cards */}
-                <div className="rounded-3xl bg-[#111827] border border-slate-800/90 p-5 space-y-3.5">
+                <div className="glass-surface rounded-3xl p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-base font-extrabold text-white">Tezkor O&apos;yinlar</h2>
+                    <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                      Tezkor O&apos;yinlar
+                    </h2>
                     <button
                       onClick={() => setActiveTab('arena')}
-                      className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold"
+                      className="text-xs text-teal-600 dark:text-cyan-400 hover:underline font-semibold"
                     >
                       10 ta rejim →
                     </button>
                   </div>
 
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
                     {[
-                      { id: 'speed_sprint' as GameId, title: 'Tarjima-Sprint', sub: '60s Imlo & Combo', badge: 'A1–B2', color: 'border-cyan-500/30 bg-cyan-950/20' },
-                      { id: 'sentence_builder' as GameId, title: 'Grammatika Konstruktori', sub: 'Inversion & Conditionals', badge: 'A2–C1', color: 'border-purple-500/30 bg-purple-950/20' },
-                      { id: 'academic_paraphrase' as GameId, title: 'Akademik Parafraz Duellari', sub: 'AI Band 5 → 8 Baholash', badge: 'Band 8', color: 'border-emerald-500/30 bg-emerald-950/20' },
-                      { id: 'collocation_matcher' as GameId, title: 'Kollokatsiya Matcher', sub: 'Mitigate → Risk', badge: 'B1–C1', color: 'border-amber-500/30 bg-amber-950/20' },
+                      { id: 'speed_sprint' as GameId, title: 'Tarjima-Sprint', sub: '60s Imlo & Combo', badge: 'A1–B2' },
+                      { id: 'sentence_builder' as GameId, title: 'Grammatika Konstruktori', sub: 'Inversion & Conditionals', badge: 'A2–C1' },
+                      { id: 'academic_paraphrase' as GameId, title: 'Akademik Parafraz Duellari', sub: 'AI Band 5 → 8 Baholash', badge: 'Band 8' },
+                      { id: 'collocation_matcher' as GameId, title: 'Kollokatsiya Matcher', sub: 'Mitigate → Risk', badge: 'B1–C1' },
                     ].map((g) => (
                       <button
                         key={g.id}
                         onClick={() => handlePlayGame(g.id)}
-                        className={`w-full p-3.5 rounded-2xl border ${g.color} hover:border-cyan-400/60 text-left flex items-center justify-between transition-all group`}
+                        className="w-full p-3.5 rounded-2xl glass-pill hover:border-teal-500/40 dark:hover:border-cyan-400/40 text-left flex items-center justify-between transition-all hover:scale-[1.01] active:scale-[0.99] group"
                       >
                         <div>
-                          <p className="text-xs font-extrabold text-white group-hover:text-cyan-300">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-teal-700 dark:group-hover:text-cyan-300 transition-colors">
                             {g.title}
                           </p>
-                          <p className="text-[11px] text-slate-400">{g.sub}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">{g.sub}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-900 text-slate-300 font-bold">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-slate-300 font-mono font-bold">
                             {g.badge}
                           </span>
-                          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
+                          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-teal-600 dark:group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
                         </div>
                       </button>
                     ))}
                   </div>
                 </div>
-              </div>
+              </section>
             </div>
           )}
 
           {/* ================= TAB 1: GAME CENTER & ARENA ================= */}
           {activeTab === 'arena' && (
             <div className="space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-[#111827] via-slate-900/90 to-cyan-950/40 border border-slate-800">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-xs uppercase tracking-wider border border-cyan-500/30">
-                      Game Center & Arena
-                    </span>
-                    <span className="text-xs text-slate-400">10 Ta Interaktiv O&apos;yin</span>
+              {/* Hero Banner with Floating 3D Glass Asset */}
+              <section className="glass-surface rounded-3xl p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative overflow-hidden">
+                <div className="space-y-3 max-w-2xl relative z-10">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-pill text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-cyan-300">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Game Center &amp; Arena • 10 ta Interaktiv O&apos;yin</span>
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-white">
+
+                  <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
                     Shaxsiy Lug&apos;atingiz Asosidagi Arena
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
-                    Oddiy imlodan tortib IELTS Band 7.5+ insho va nutq darajasigacha olib chiquvchi 10 ta o&apos;yin rejimi.
+
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Oddiy imlodan tortib IELTS Band {user.target_ielts_band}+ akademik insho va tezkor nutq darajasigacha olib chiquvchi adaptiv gamifikatsiya tizimi.
                   </p>
+
+                  <div className="pt-1 flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => handlePlayGame('speed_sprint')}
+                      className="px-6 py-3 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 dark:from-cyan-400 dark:to-teal-400 text-white dark:text-slate-950 font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-teal-600/20 dark:shadow-cyan-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    >
+                      <Zap className="w-4 h-4 fill-current" />
+                      <span>Tezkor Sprintni Boshlash</span>
+                    </button>
+                    <button
+                      onClick={() => handlePlayGame('ai_boss_fight')}
+                      className="px-5 py-3 rounded-full glass-pill text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    >
+                      <Crown className="w-4 h-4 text-violet-500" />
+                      <span>AI Boss Fight</span>
+                    </button>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => handlePlayGame('speed_sprint')}
-                  className="self-start md:self-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-cyan-500/20 active:scale-95 transition-all"
-                >
-                  <Zap className="w-4 h-4 fill-slate-950" />
-                  <span>Tezkor Sprint</span>
-                </button>
-              </div>
+                {/* Right-Aligned Floating 3D Glass Typography/Badge Asset */}
+                <div className="hidden md:flex items-center justify-center shrink-0 pr-2">
+                  <div className="relative w-56 h-40 animate-float-slow">
+                    <div className="absolute inset-2 rounded-3xl bg-gradient-to-br from-cyan-400/30 via-teal-400/20 to-violet-500/30 blur-xl" />
+                    <div className="relative w-full h-full rounded-3xl glass-surface p-5 flex flex-col justify-between transform rotate-2 border border-white/70 dark:border-white/15">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-teal-700 dark:text-cyan-300">
+                          SM-2 + AI ENGINE
+                        </span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-black tracking-tighter bg-gradient-to-br from-slate-900 via-teal-700 to-cyan-600 dark:from-white dark:via-cyan-200 dark:to-teal-400 bg-clip-text text-transparent">
+                          BAND {user.target_ielts_band}+
+                        </p>
+                        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5 font-mono tabular-nums">
+                          10 MODES • {vocabulary.length} WORDS
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-              {/* Skill Filters */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Category Filter Tabs (Scrollable Pill Chips) */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {[
                   { id: 'all', label: `Barchasi (${GAME_MODES.length})` },
                   { id: 'leksika', label: 'Leksika & Imlo' },
                   { id: 'grammatika', label: 'Grammatika' },
                   { id: 'writing', label: 'Writing & Duellar' },
                   { id: 'audio', label: 'Audio & Speaking' },
-                  { id: 'boss', label: 'AI Boss Fight 👑' },
-                ].map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedGameFilter(cat.id as any)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                      selectedGameFilter === cat.id
-                        ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
-                        : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
+                  { id: 'boss', label: 'AI Boss Fight' },
+                ].map((cat) => {
+                  const active = selectedGameFilter === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedGameFilter(cat.id as any)}
+                      className={`shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
+                        active
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-md shadow-slate-900/15 dark:shadow-white/10 scale-[1.02]'
+                          : 'glass-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* 10 Games Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredGames.map((game) => {
-                  const isSpecial = game.id === 'ai_boss_fight';
+                  const isBoss = game.id === 'ai_boss_fight';
                   const isDuel = game.id === 'academic_paraphrase';
                   return (
-                    <div
+                    <article
                       key={game.id}
-                      className={`group rounded-3xl p-5 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 ${
-                        isSpecial
-                          ? 'bg-gradient-to-b from-purple-950/40 to-slate-900 border-2 border-purple-500/50 shadow-xl shadow-purple-500/10'
+                      className={`glass-surface rounded-3xl p-6 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 ${
+                        isBoss
+                          ? 'ring-1 ring-violet-500/40 dark:ring-violet-400/40'
                           : isDuel
-                          ? 'bg-gradient-to-b from-cyan-950/40 to-slate-900 border border-cyan-500/40 shadow-lg shadow-cyan-500/10'
-                          : 'bg-[#111827] border border-slate-800 hover:border-slate-700'
+                          ? 'ring-1 ring-teal-500/35 dark:ring-cyan-400/35'
+                          : ''
                       }`}
                     >
+                      {/* Card Header */}
                       <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-start justify-between gap-2 mb-4">
+                          <div className="flex items-center gap-3">
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                                isSpecial
-                                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                              className={`w-11 h-11 rounded-2xl flex items-center justify-center border backdrop-blur-md ${
+                                isBoss
+                                  ? 'bg-violet-500/15 border-violet-500/30 text-violet-600 dark:text-violet-300'
                                   : isDuel
-                                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                                  : 'bg-slate-800 text-slate-300 border border-slate-700'
+                                  ? 'bg-teal-500/15 dark:bg-cyan-500/15 border-teal-500/30 dark:border-cyan-500/30 text-teal-700 dark:text-cyan-300'
+                                  : 'bg-slate-200/70 dark:bg-white/[0.06] border-black/[0.06] dark:border-white/[0.1] text-slate-700 dark:text-slate-200'
                               }`}
                             >
                               {ICON_MAP[game.icon] || <Zap className="w-5 h-5" />}
                             </div>
                             <div>
-                              <span className="text-[10px] text-slate-400 block">{game.category}</span>
-                              <span className="text-[11px] font-bold text-cyan-400">{game.level_badge}</span>
+                              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 block">
+                                {game.category}
+                              </span>
+                              <span className="inline-block mt-0.5 text-[11px] font-mono font-bold text-teal-700 dark:text-cyan-300">
+                                {game.level_badge}
+                              </span>
                             </div>
                           </div>
+
                           {game.xp_reward && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono font-bold">
+                            <span className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[11px] font-mono font-bold tabular-nums shrink-0">
                               {game.xp_reward}
                             </span>
                           )}
                         </div>
 
-                        <h3 className="text-base font-extrabold text-white mb-1.5 group-hover:text-cyan-400 transition-colors">
+                        {/* Card Body */}
+                        <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white mb-2">
                           {game.title}
                         </h3>
-                        <p className="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-3 mb-4">
                           {game.description_uz}
                         </p>
                       </div>
 
-                      <div className="pt-3 border-t border-slate-800/80">
-                        <div className="text-[10px] text-slate-500 mb-3 flex items-center gap-1 line-clamp-1">
-                          <Target className="w-3 h-3 text-cyan-500 shrink-0" />
-                          <span>{game.ielts_benefit}</span>
+                      {/* Card Footer */}
+                      <div className="pt-4 border-t border-black/[0.06] dark:border-white/[0.08] space-y-4">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] text-[11px] font-medium text-slate-600 dark:text-slate-300 max-w-full">
+                          <Target className="w-3.5 h-3.5 text-teal-600 dark:text-cyan-400 shrink-0" />
+                          <span className="truncate">{game.ielts_benefit}</span>
                         </div>
 
-                        <button
-                          onClick={() => handlePlayGame(game.id)}
-                          className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
-                            isSpecial
-                              ? 'bg-purple-600 hover:bg-purple-500 text-white'
-                              : isDuel
-                              ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950'
-                              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white'
-                          }`}
-                        >
-                          <Play className="w-3.5 h-3.5 fill-current" />
-                          <span>O&apos;ynash ({game.duration_seconds}s)</span>
-                        </button>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{game.duration_seconds}s</span>
+                          </span>
+
+                          <button
+                            onClick={() => handlePlayGame(game.id)}
+                            className={`px-5 py-2.5 rounded-full font-bold text-xs flex items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm ${
+                              isBoss
+                                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-violet-500/25'
+                                : isDuel
+                                ? 'bg-gradient-to-r from-teal-600 to-cyan-600 dark:from-cyan-400 dark:to-teal-400 text-white dark:text-slate-950 shadow-cyan-500/20'
+                                : 'bg-slate-900 dark:bg-white/10 hover:bg-slate-800 dark:hover:bg-white/15 text-white border border-transparent dark:border-white/10'
+                            }`}
+                          >
+                            <span>O&apos;ynash</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </article>
                   );
                 })}
-              </div>
+              </section>
             </div>
           )}
 
           {/* ================= TAB 2: MY VOCABULARY BANK ================= */}
           {activeTab === 'vocabulary' && (
             <div className="space-y-6">
-              <div className="p-6 rounded-3xl bg-[#111827] border border-slate-800 space-y-4">
+              <section className="glass-surface rounded-3xl p-6 space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-white">
-                      Shaxsiy Lug&apos;at Banki & Spaced Repetition (SM-2)
+                    <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                      Shaxsiy Lug&apos;at Banki &amp; SM-2
                     </h2>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
                       Foydalanuvchi kiritgan so&apos;zlar SM-2 algoritmi orqali o&apos;yinlarga navbatma-navbat uzatiladi
                     </p>
                   </div>
 
                   <button
                     onClick={() => setIsAddWordOpen(true)}
-                    className="self-start sm:self-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-2"
+                    className="self-start sm:self-auto px-5 py-2.5 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 dark:from-emerald-400 dark:to-cyan-400 text-white dark:text-slate-950 font-bold text-xs flex items-center gap-2 shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
-                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
                     <span>Yangi so&apos;z qo&apos;shish</span>
                   </button>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300">
-                  <span className="font-bold text-cyan-400 block mb-1">
-                    🔄 Xotira Zanjiri: So&apos;z Qanday Qilib &ldquo;Mastered&rdquo; Bo&apos;ladi?
+                <div className="p-4 rounded-2xl glass-pill text-xs text-slate-600 dark:text-slate-300">
+                  <span className="font-bold text-teal-700 dark:text-cyan-400 block mb-1">
+                    Xotira Zanjiri: So&apos;z Qanday Qilib &ldquo;Mastered&rdquo; Bo&apos;ladi?
                   </span>
-                  <p className="text-[11px] leading-relaxed text-slate-400">
+                  <p className="leading-relaxed">
                     Kiritilgan so&apos;z dastlab <strong>Tarjima-Sprint</strong>da to&apos;g&apos;ri yoziladi, keyin <strong>Kollokatsiya Matcher</strong>da birikmalar bilan mustahkamlanadi. Yakunida <strong>Akademik Parafraz</strong>da xatosiz ishlatilgandagina <em>&ldquo;Mastered&rdquo;</em> deb belgilanadi.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-2">
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   {(['all', 'new', 'learning', 'reviewing', 'mastered'] as const).map((st) => (
                     <button
                       key={st}
                       onClick={() => setSelectedStatusFilter(st)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold capitalize transition-all ${
                         selectedStatusFilter === st
-                          ? 'bg-cyan-500 text-slate-950 font-bold'
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold shadow-sm'
+                          : 'glass-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       {st === 'all' ? `Barchasi (${vocabulary.length})` : st}
                     </button>
                   ))}
                 </div>
-              </div>
+              </section>
 
               <div className="relative">
-                <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Lug'atdan qidirish (inglizcha yoki o'zbekcha)..."
-                  className="w-full pl-11 pr-4 py-3 rounded-2xl bg-[#111827] border border-slate-800 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-2xl glass-surface text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-teal-500/40 dark:focus:ring-cyan-400/40"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {filteredVocabulary.map((word) => (
                   <div
                     key={word.id}
-                    className="p-5 rounded-2xl bg-[#111827] border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+                    className="glass-surface rounded-3xl p-5 space-y-3 hover:-translate-y-0.5 transition-all"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="text-lg font-black text-white">{word.word_en}</h4>
+                          <h4 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+                            {word.word_en}
+                          </h4>
                           <button
                             onClick={() => playWordAudio(word.word_en)}
-                            className="p-1 rounded-lg text-slate-400 hover:text-cyan-400 hover:bg-slate-800"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 dark:text-slate-400 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                            aria-label="Talaffuz"
                           >
                             <Volume2 className="w-4 h-4" />
                           </button>
-                          <span className="text-[10px] text-slate-500 font-mono">{word.phonetic}</span>
+                          <span className="text-[11px] text-slate-400 font-mono">{word.phonetic}</span>
                         </div>
-                        <p className="text-sm font-semibold text-cyan-300">{word.translation_uz}</p>
+                        <p className="text-sm font-semibold text-teal-700 dark:text-cyan-300">
+                          {word.translation_uz}
+                        </p>
                       </div>
 
                       <span
-                        className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                        className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider tabular-nums ${
                           word.status === 'mastered'
-                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-700'
+                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
                             : word.status === 'reviewing'
-                            ? 'bg-amber-950 text-amber-400 border border-amber-700'
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
                             : word.status === 'learning'
-                            ? 'bg-blue-950 text-blue-400 border border-blue-700'
-                            : 'bg-purple-950 text-purple-400 border border-purple-700'
+                            ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                            : 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30'
                         }`}
                       >
                         {word.status} ({word.mastery_score}%)
@@ -735,7 +819,7 @@ export default function Home() {
                         {word.collocations.map((col, idx) => (
                           <span
                             key={idx}
-                            className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300"
+                            className="text-[11px] px-2.5 py-0.5 rounded-full glass-pill text-slate-700 dark:text-slate-300"
                           >
                             {col}
                           </span>
@@ -743,13 +827,13 @@ export default function Home() {
                       </div>
                     )}
 
-                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 italic">
+                    <div className="p-3.5 rounded-2xl bg-slate-100/70 dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-400 italic">
                       &ldquo;{word.example_sentence}&rdquo;
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                      <span>Mavzu: {word.topic_tag} • Daraja: {word.academic_level}</span>
-                      <span>Takrorlash oralig&apos;i: {word.repetition_interval} kun</span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 font-mono tabular-nums">
+                      <span>Mavzu: {word.topic_tag} • {word.academic_level}</span>
+                      <span>Interval: {word.repetition_interval} kun</span>
                     </div>
                   </div>
                 ))}
@@ -760,100 +844,116 @@ export default function Home() {
           {/* ================= TAB 3: AI IELTS COACH ================= */}
           {activeTab === 'coach' && (
             <div className="space-y-6">
-              <div className="p-6 rounded-3xl bg-[#111827] border border-slate-800 space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+              <section className="glass-surface rounded-3xl p-6 space-y-5">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-300">
                     <Brain className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-white">
-                      AI IELTS Coach & Writing Evaluator
+                    <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                      AI IELTS Coach &amp; Writing Evaluator
                     </h2>
-                    <p className="text-xs text-slate-400">
-                      Matningizni rasmiy 4 ta IELTS mezoni bo&apos;yicha real-vaqtda tahlil qiling
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                      Matningizni rasmiy IELTS mezonlari bo&apos;yicha real-vaqtda tahlil qiling
                     </p>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase">Writing Task 2 Mashqi:</span>
-                  <p className="text-sm font-semibold text-slate-200">
+                <div className="p-4 rounded-2xl glass-pill space-y-1">
+                  <span className="text-[10px] font-bold text-teal-700 dark:text-cyan-400 uppercase tracking-wider">
+                    Writing Task 2 Mashqi:
+                  </span>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     &ldquo;Discuss the impact of technology on modern education. Provide reasons and examples.&rdquo;
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-slate-300">Sizning javob matningiz:</label>
+                <div className="space-y-3">
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300 block">
+                    Javobingiz yoki parafrazingiz:
+                  </label>
                   <textarea
                     rows={4}
                     value={coachInput}
                     onChange={(e) => setCoachInput(e.target.value)}
-                    className="w-full p-4 rounded-2xl bg-slate-950 border border-slate-800 focus:border-cyan-500 text-sm text-white outline-none leading-relaxed"
+                    className="w-full p-4 rounded-2xl bg-slate-100/80 dark:bg-white/[0.04] border border-black/[0.08] dark:border-white/[0.1] focus:border-teal-500 dark:focus:border-cyan-400 text-sm text-slate-900 dark:text-white outline-none transition-colors"
                   />
-                </div>
 
-                <button
-                  onClick={handleCoachAnalyze}
-                  disabled={isCoachAnalyzing}
-                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-purple-600/25 disabled:opacity-40 transition-all"
-                >
-                  {isCoachAnalyzing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>AI Tekshirmoqda...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>Matnni Tahlil Qilish & Band Ball Olish</span>
-                    </>
-                  )}
-                </button>
-              </div>
+                  <button
+                    onClick={handleCoachAnalyze}
+                    disabled={isCoachAnalyzing || coachInput.trim().length < 5}
+                    className="px-6 py-3 rounded-full bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-violet-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    {isCoachAnalyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>AI tahlil qilmoqda...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>AI Examiner Bahosini Olish</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </section>
 
               {coachFeedback && (
-                <div className="p-6 rounded-3xl bg-[#111827] border border-purple-500/30 space-y-5 animate-in fade-in">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-800">
-                    <div className="flex items-center gap-4">
-                      <div className="w-20 h-20 rounded-full border-4 border-purple-400 flex flex-col items-center justify-center bg-purple-950/40">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">Estimated</span>
-                        <span className="text-2xl font-black text-white">{coachFeedback.evaluated_band}</span>
-                        <span className="text-[9px] text-purple-300 font-bold">Overall Band</span>
-                      </div>
-                      <div>
-                        <h4 className="text-base font-bold text-white flex items-center gap-2">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                          AI Agent Feedback & Scoring
-                        </h4>
-                        <p className="text-xs text-slate-400">{coachFeedback.feedback_uz}</p>
-                      </div>
+                <section className="glass-surface rounded-3xl p-6 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      AI Examiner Natijasi
+                    </h3>
+                    <span className="px-3.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-sm tabular-nums">
+                      Band {coachFeedback.evaluated_band}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl glass-pill text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                      <span className="font-bold text-teal-700 dark:text-cyan-400 block mb-1">
+                        Ekspert Izohi:
+                      </span>
+                      {coachFeedback.feedback_uz}
                     </div>
 
                     {coachFeedback.criteria_scores && (
-                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                        <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                          <span className="text-[9px] text-slate-500 block">Task Achiev</span>
-                          <strong className="text-cyan-300">{coachFeedback.criteria_scores.task_achievement}</strong>
+                      <div className="grid grid-cols-3 gap-2.5 text-center text-xs">
+                        <div className="p-3 rounded-2xl glass-pill">
+                          <span className="text-[10px] text-slate-500 block mb-1">Task Achiev</span>
+                          <strong className="text-base font-mono tabular-nums text-teal-700 dark:text-cyan-300">
+                            {coachFeedback.criteria_scores.task_achievement}
+                          </strong>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                          <span className="text-[9px] text-slate-500 block">Lexical Res</span>
-                          <strong className="text-amber-300">{coachFeedback.criteria_scores.lexical_resource}</strong>
+                        <div className="p-3 rounded-2xl glass-pill">
+                          <span className="text-[10px] text-slate-500 block mb-1">Lexical Res</span>
+                          <strong className="text-base font-mono tabular-nums text-amber-600 dark:text-amber-300">
+                            {coachFeedback.criteria_scores.lexical_resource}
+                          </strong>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                          <span className="text-[9px] text-slate-500 block">Grammar</span>
-                          <strong className="text-purple-300">{coachFeedback.criteria_scores.grammatical_range}</strong>
+                        <div className="p-3 rounded-2xl glass-pill">
+                          <span className="text-[10px] text-slate-500 block mb-1">Grammar</span>
+                          <strong className="text-base font-mono tabular-nums text-violet-700 dark:text-violet-300">
+                            {coachFeedback.criteria_scores.grammatical_range}
+                          </strong>
                         </div>
                       </div>
                     )}
                   </div>
 
                   {coachFeedback.c1_upgrade && (
-                    <div className="p-4 rounded-2xl bg-purple-950/30 border border-purple-500/30 text-xs space-y-1">
-                      <span className="font-bold text-purple-300 block">✨ C1 Akademik Muqobili (Upgrade):</span>
-                      <p className="text-slate-200 italic">&ldquo;{coachFeedback.c1_upgrade}&rdquo;</p>
+                    <div className="p-4 rounded-2xl bg-violet-500/10 border border-violet-500/25 text-xs space-y-1">
+                      <span className="font-bold text-violet-700 dark:text-violet-300 block">
+                        ✨ C1 Akademik Muqobili (Upgrade):
+                      </span>
+                      <p className="text-slate-800 dark:text-slate-200 italic">
+                        &ldquo;{coachFeedback.c1_upgrade}&rdquo;
+                      </p>
                     </div>
                   )}
-                </div>
+                </section>
               )}
             </div>
           )}
@@ -861,13 +961,15 @@ export default function Home() {
           {/* ================= TAB 4: LEADERBOARD & ANALYTICS ================= */}
           {activeTab === 'analytics' && (
             <div className="space-y-6">
-              <div className="p-6 rounded-3xl bg-[#111827] border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+              <section className="glass-surface rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Flame className="w-6 h-6 text-orange-500 fill-orange-500" />
-                    <h3 className="text-xl font-bold text-white">{user.streak_days} Kunlik Uzluksiz Streak!</h3>
+                    <h3 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono tabular-nums">
+                      {user.streak_days} Kunlik Uzluksiz Streak
+                    </h3>
                   </div>
-                  <p className="text-xs text-slate-400 max-w-md">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md">
                     Har kuni kamida 1 ta mini-o&apos;yin o&apos;ynang va yangi so&apos;zlarni mustahkamlab, reytingda ko&apos;tariling.
                   </p>
                 </div>
@@ -876,10 +978,10 @@ export default function Home() {
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].map((day) => (
                     <div
                       key={day}
-                      className={`w-8 h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-bold border ${
+                      className={`w-8 h-10 rounded-xl flex flex-col items-center justify-center text-[10px] font-mono font-bold border transition-colors ${
                         day <= user.streak_days
-                          ? 'bg-gradient-to-t from-orange-500/20 to-orange-500/40 border-orange-500/50 text-orange-400'
-                          : 'bg-slate-900 border-slate-800 text-slate-600'
+                          ? 'bg-orange-500/15 border-orange-500/40 text-orange-600 dark:text-orange-400'
+                          : 'glass-pill text-slate-400 dark:text-slate-600'
                       }`}
                     >
                       <span>D{day}</span>
@@ -887,16 +989,17 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
 
-              {/* Leaderboard */}
-              <div className="p-6 rounded-3xl bg-[#111827] border border-slate-800 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-amber-400" />
-                  <h3 className="text-lg font-extrabold text-white">Haftalik Arena Liderbordi</h3>
+              <section className="glass-surface rounded-3xl p-6 space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    Haftalik Arena Liderbordi
+                  </h3>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {(() => {
                     const selfEmail = user.email?.toLowerCase();
                     const others = leaderboard.filter(
@@ -922,31 +1025,36 @@ export default function Home() {
                     return combined.map((entry, idx) => (
                       <div
                         key={entry.name + idx}
-                        className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                        className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
                           entry.isSelf
-                            ? 'bg-cyan-950/30 border-cyan-500/40'
-                            : 'bg-slate-900/70 border-slate-800'
+                            ? 'bg-teal-500/10 dark:bg-cyan-500/10 border-teal-500/35 dark:border-cyan-400/35'
+                            : 'glass-pill'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-black text-amber-400">
+                        <div className="flex items-center gap-3.5">
+                          <span className="w-8 h-8 rounded-xl bg-slate-200/80 dark:bg-white/10 flex items-center justify-center text-xs font-mono font-black text-amber-600 dark:text-amber-400 tabular-nums">
                             #{idx + 1}
                           </span>
                           <div>
-                            <p className="text-xs font-bold text-white">
-                              {entry.name} {entry.isSelf && <span className="text-cyan-400">(Siz)</span>}
+                            <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              {entry.name}{' '}
+                              {entry.isSelf && (
+                                <span className="text-teal-700 dark:text-cyan-400 font-semibold">(Siz)</span>
+                              )}
                             </p>
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                               Level {entry.level} • Target Band {entry.band}
                             </p>
                           </div>
                         </div>
-                        <span className="text-xs font-mono font-black text-amber-400">{entry.xp} XP</span>
+                        <span className="text-xs sm:text-sm font-mono font-black tabular-nums text-amber-600 dark:text-amber-400">
+                          {entry.xp} XP
+                        </span>
                       </div>
                     ));
                   })()}
                 </div>
-              </div>
+              </section>
             </div>
           )}
         </main>
