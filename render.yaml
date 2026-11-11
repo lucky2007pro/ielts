@@ -30,7 +30,7 @@ services:
         fromService:
           type: web
           name: lexiai-ielts-backend
-          property: url
+          envVarKey: RENDER_EXTERNAL_URL
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
