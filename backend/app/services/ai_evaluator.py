@@ -19,7 +19,7 @@ async def evaluate_academic_paraphrase(
         try:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel(settings.GEMINI_MODEL)
 
             prompt = f"""
 Siz qat'iy va professional IELTS imtihonchisisiz. Quyidagi topshiriqni baholang va FAQAT quyidagi JSON formatida javob qaytaring (hech qanday markdown belgilarisiz):
@@ -110,7 +110,7 @@ async def enrich_word_with_ai(word_input: str) -> dict:
         try:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel(settings.GEMINI_MODEL)
 
             prompt = f"""
 Siz IELTS bo'yicha akademik leksika mutaxassisiz. Quyidagi so'zni tahlil qiling va FAQAT JSON formatida qaytaring:

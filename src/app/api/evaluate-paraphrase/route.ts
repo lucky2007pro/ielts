@@ -22,8 +22,9 @@ export async function POST(request: Request) {
     }
 
     // 1. Try FastAPI Python backend first if running
+    const backendUrl = (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
     try {
-      const fastApiRes = await fetch('http://127.0.0.1:8000/api/games/evaluate-paraphrase', {
+      const fastApiRes = await fetch(`${backendUrl}/api/games/evaluate-paraphrase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     if (apiKey) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' });
 
         const prompt = `
 Siz qat'iy va professional IELTS imtihonchisisiz. Quyidagi topshiriqni baholang va FAQAT quyidagi JSON formatida javob qaytaring (hech qanday markdown \`\`\`json belgilarsiz, faqat xom JSON):

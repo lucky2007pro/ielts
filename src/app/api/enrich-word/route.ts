@@ -10,12 +10,29 @@ export async function POST(request: Request) {
     }
 
     const trimmed = word.trim();
+
+    // 1. Try FastAPI Python backend first if configured/running
+    const backendUrl = (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+    try {
+      const fastApiRes = await fetch(`${backendUrl}/api/vocabulary/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: trimmed }),
+      });
+      if (fastApiRes.ok) {
+        const fastApiData = await fastApiRes.json();
+        return NextResponse.json(fastApiData);
+      }
+    } catch {
+      // Fallback to direct Gemini or heuristic
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (apiKey) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' });
 
         const prompt = `
 Siz IELTS bo'yicha akademik lug'at mutaxassisiz. Quyidagi so'zni tahlil qiling va unga IELTS Writing/Speaking talablari bo'yicha ma'lumotlarni FAQAT JSON formatida qaytaring:
