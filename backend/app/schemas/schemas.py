@@ -69,6 +69,8 @@ class UserProfileResponse(BaseModel):
     id: int
     full_name: str
     email: str
+    avatar_url: Optional[str] = None
+    auth_provider: str = "local"
     current_level: str
     target_ielts_band: float
     xp_points: int
@@ -79,3 +81,30 @@ class UserProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class GoogleSyncRequest(BaseModel):
+    email: str
+    full_name: str
+    avatar_url: Optional[str] = None
+    google_id: Optional[str] = None
+
+
+class UserRegisterRequest(BaseModel):
+    full_name: str
+    email: str
+    password: str = Field(..., min_length=4)
+    current_level: str = "B1"
+    target_ielts_band: float = 7.5
+
+
+class UserLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class ProfileUpdateRequest(BaseModel):
+    email: str
+    full_name: Optional[str] = None
+    current_level: Optional[str] = None
+    target_ielts_band: Optional[float] = None

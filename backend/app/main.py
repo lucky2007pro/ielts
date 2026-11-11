@@ -1,14 +1,32 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.models.models import VocabularyWord, User
-from app.routers import vocabulary, ai_coach, games
+from app.routers import vocabulary, ai_coach, games, auth
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
+
+
+def _ensure_user_columns():
+    with engine.begin() as conn:
+        for col, col_type in [
+            ("avatar_url", "VARCHAR"),
+            ("auth_provider", "VARCHAR DEFAULT 'local'"),
+            ("google_id", "VARCHAR"),
+            ("password_hash", "VARCHAR"),
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {col_type}"))
+            except Exception:
+                pass
+
+
+_ensure_user_columns()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,6 +71,7 @@ app.add_middleware(
 )
 
 # Mount Routers
+app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(vocabulary.router, prefix=settings.API_V1_STR)
 app.include_router(ai_coach.router, prefix=settings.API_V1_STR)
 app.include_router(games.router, prefix=settings.API_V1_STR)

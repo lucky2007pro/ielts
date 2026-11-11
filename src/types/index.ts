@@ -25,6 +25,8 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  avatar_url?: string;
+  auth_provider?: 'google' | 'local' | 'guest';
   current_level: 'A2' | 'B1' | 'B2' | 'C1';
   target_ielts_band: number; // e.g. 7.5
   xp_points: number;
