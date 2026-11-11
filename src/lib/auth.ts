@@ -21,13 +21,20 @@ export function isGoogleOAuthConfigured(): boolean {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
 
-export function getAppBaseUrl(requestUrl: string): string {
+export function getAppBaseUrl(requestUrl: string, headers?: Headers): string {
   const configured =
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.RENDER_EXTERNAL_URL ||
     process.env.APP_URL;
   if (configured) {
     return configured.replace(/\/$/, '');
+  }
+  if (headers) {
+    const fwdHost = headers.get('x-forwarded-host') || headers.get('host');
+    const fwdProto = headers.get('x-forwarded-proto') || 'https';
+    if (fwdHost && !fwdHost.includes('0.0.0.0')) {
+      return `${fwdProto.split(',')[0].trim()}://${fwdHost.split(',')[0].trim()}`;
+    }
   }
   const parsed = new URL(requestUrl);
   return `${parsed.protocol}//${parsed.host}`;

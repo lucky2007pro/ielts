@@ -9,7 +9,7 @@ import {
 } from '@/lib/auth';
 
 export async function GET(request: Request) {
-  const baseUrl = getAppBaseUrl(request.url);
+  const baseUrl = getAppBaseUrl(request.url, request.headers);
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');

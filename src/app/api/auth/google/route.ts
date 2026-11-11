@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getAppBaseUrl, isGoogleOAuthConfigured } from '@/lib/auth';
 
 export async function GET(request: Request) {
-  const baseUrl = getAppBaseUrl(request.url);
+  const baseUrl = getAppBaseUrl(request.url, request.headers);
 
   if (!isGoogleOAuthConfigured()) {
     return NextResponse.redirect(`${baseUrl}/?auth_error=google_not_configured`);
